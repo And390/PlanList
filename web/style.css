@@ -1,0 +1,155 @@
+html
+{
+    height: 100%
+}
+
+body
+{
+    height: 100%;
+}
+
+a
+{
+    text-decoration: none;
+}
+
+
+#login_frame
+{
+    margin: 50px auto 0;
+    background-color: #F0F0F0;
+}
+
+#login_frame td
+{
+    padding: 4px 8px;
+}
+
+#login_frame td.tabs  {
+    background-color: #D0D0D0;
+    padding: 0;
+}
+
+#login_frame td.tabs .tab  {
+    display: inline-block;
+    background-color: #E0E0E0;
+    padding: 4px 8px;
+    font-size: 0.8em;
+    color: #404080;
+    cursor: pointer;
+}
+#login_frame td.tabs .tab:hover  {
+    background-color: #E8E8E8;
+    color: #0000A0;
+}
+
+#login_frame td.tabs .tab.selected  {
+    background-color: #F0F0F0;
+    color: inherit;
+    cursor: default;
+}
+
+#header
+{
+    background-color: #E0E0F0;
+    text-align: right;
+    margin-bottom: 8px;
+}
+
+#content
+{
+    margin: 24px 24px 0 24px;
+}
+
+#username
+{
+    font-weight: bold;
+}
+
+#ajaxMessage
+{
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    display: none;  /* default value */
+}
+
+h1
+{
+    font-size: 24px;
+    /*text-align: center;*/
+    margin: 24px 0 16px 250px;
+}
+
+#plan
+{
+}
+
+#plan textarea
+{
+    height: 400px;
+    width: 100%;
+}
+
+#childs
+{
+    padding-left: 50px;
+}
+
+.plannode
+{
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px;
+    background-color: #c6e3ff;
+    color: #004050;
+    cursor: pointer;
+}
+.plannode:hover
+{
+    background-color: #d1e8ff;
+    color: #0080A0;
+}
+
+.plannode-button
+{
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    padding: 4px;
+    cursor: pointer;
+}
+.plannode-button.delete  {  visibility: hidden;  }
+:hover > .plannode-button.delete  {  visibility: visible;  }
+.plannode-button.edit  {  visibility: hidden;  }
+:hover > .plannode-button.edit  {  visibility: visible;  }
+.plannode-button.add  {  background-position: 0 0;  }
+.plannode-button.add:hover  {  background-position: 24px 0;  }
+.plannode-button.delete  {  background-position: 0 -24px;  }
+.plannode-button.delete:hover  {  background-position: 24px -24px;  }
+.plannode-button.edit  {  background-position: 0 -48px;  }
+.plannode-button.edit:hover  {  background-position: 24px -48px;  }
+
+
+.error
+{
+    padding: 2px;
+    background-color: #F0D0D0;
+    color: #800000;
+}
+span.error
+{
+    display: inline-block;
+}
+
+.success
+{
+    padding: 2px;
+    background-color: #C0E0F0;
+    color: #204080;
+}
+
+.right
+{
+    float: right;
+}

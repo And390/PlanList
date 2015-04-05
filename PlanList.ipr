@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ArtifactManager">
+    <artifact type="exploded-war" name="PlanList">
+      <output-path>$PROJECT_DIR$/out/PlanList</output-path>
+      <root id="root">
+        <element id="dir-copy" path="$PROJECT_DIR$/web" />
+        <element id="directory" name="WEB-INF">
+          <element id="directory" name="classes">
+            <element id="module-output" name="Utils" />
+            <element id="module-output" name="PlanList" />
+            <element id="module-output" name="WebAdmin" />
+          </element>
+          <element id="directory" name="lib">
+            <element id="file-copy" path="$PROJECT_DIR$/../Java/lib/commons-io-2.2.jar" />
+            <element id="file-copy" path="$PROJECT_DIR$/../Java/lib/commons-lang-2.4.jar" />
+          </element>
+        </element>
+        <element id="file-copy" path="$PROJECT_DIR$/../../web/planlist/favicon.ico" />
+        <element id="file-copy" path="$PROJECT_DIR$/../../web/planlist/planlist.js" />
+        <element id="file-copy" path="$PROJECT_DIR$/../../web/locatejs/locate.js" />
+      </root>
+    </artifact>
+    <artifact type="war" name="PlanList.war">
+      <output-path>$PROJECT_DIR$/out/</output-path>
+      <root id="archive" name="PlanList.war">
+        <element id="artifact" artifact-name="PlanList" />
+      </root>
+    </artifact>
+  </component>
+  <component name="CompilerConfiguration">
+    <option name="DEFAULT_COMPILER" value="Javac" />
+    <resourceExtensions />
+    <wildcardResourcePatterns>
+      <entry name="!?*.java" />
+      <entry name="!?*.form" />
+      <entry name="!?*.class" />
+      <entry name="!?*.groovy" />
+      <entry name="!?*.scala" />
+      <entry name="!?*.flex" />
+      <entry name="!?*.kt" />
+      <entry name="!?*.clj" />
+      <entry name="!?*.aj" />
+    </wildcardResourcePatterns>
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="false">
+        <processorPath useClasspath="true" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="DependencyValidationManager">
+    <option name="SKIP_IMPORT_STATEMENTS" value="false" />
+  </component>
+  <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false">
+    <file url="file://$PROJECT_DIR$" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/openshift/src/main/java/web/WebAuth.java" charset="windows-1251" />
+    <file url="file://$PROJECT_DIR$/src" charset="windows-1251" />
+    <file url="file://$PROJECT_DIR$/web/app.js" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/web/http.js" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/web/util.js" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/../../web/planlist" charset="UTF-8" />
+  </component>
+  <component name="EntryPointsManager">
+    <entry_points version="2.0" />
+  </component>
+  <component name="InspectionProjectProfileManager">
+    <profiles>
+      <profile version="1.0" is_locked="false">
+        <option name="myName" value="Project Default" />
+        <option name="myLocal" value="false" />
+        <inspection_tool class="ConstantConditionalExpression" enabled="false" level="WARNING" enabled_by_default="false" />
+        <inspection_tool class="ConstantIfStatement" enabled="false" level="WARNING" enabled_by_default="false" />
+        <inspection_tool class="EmptyCatchBlock" enabled="false" level="WARNING" enabled_by_default="false">
+          <option name="m_includeComments" value="true" />
+          <option name="m_ignoreTestCases" value="true" />
+          <option name="m_ignoreIgnoreParameter" value="true" />
+        </inspection_tool>
+        <inspection_tool class="EmptyFinallyBlock" enabled="false" level="WARNING" enabled_by_default="false" />
+        <inspection_tool class="EmptyTryBlock" enabled="false" level="WARNING" enabled_by_default="false" />
+        <inspection_tool class="ForCanBeForeach" enabled="false" level="WARNING" enabled_by_default="false">
+          <option name="REPORT_INDEXED_LOOP" value="true" />
+          <option name="ignoreUntypedCollections" value="false" />
+        </inspection_tool>
+        <inspection_tool class="LoggerInitializedWithForeignClass" enabled="false" level="WARNING" enabled_by_default="false">
+          <option name="loggerClassName" value="org.apache.log4j.Logger,org.slf4j.LoggerFactory,org.apache.commons.logging.LogFactory,java.util.logging.Logger" />
+          <option name="loggerFactoryMethodName" value="getLogger,getLogger,getLog,getLogger" />
+        </inspection_tool>
+        <inspection_tool class="SimplifiableIfStatement" enabled="false" level="WARNING" enabled_by_default="false" />
+        <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
+          <option name="processCode" value="true" />
+          <option name="processLiterals" value="true" />
+          <option name="processComments" value="true" />
+        </inspection_tool>
+        <inspection_tool class="StringEquality" enabled="false" level="WARNING" enabled_by_default="false" />
+        <inspection_tool class="TrivialIf" enabled="false" level="WARNING" enabled_by_default="false" />
+        <inspection_tool class="UnnecessaryLocalVariable" enabled="false" level="WARNING" enabled_by_default="false">
+          <option name="m_ignoreImmediatelyReturnedVariables" value="false" />
+          <option name="m_ignoreAnnotatedVariables" value="false" />
+        </inspection_tool>
+      </profile>
+    </profiles>
+    <option name="PROJECT_PROFILE" />
+    <option name="USE_PROJECT_PROFILE" value="false" />
+    <version value="1.0" />
+  </component>
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/PlanList.iml" filepath="$PROJECT_DIR$/PlanList.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../Utils/Utils.iml" filepath="$PROJECT_DIR$/../Utils/Utils.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../WebAdmin/WebAdmin.iml" filepath="$PROJECT_DIR$/../WebAdmin/WebAdmin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../web/planlist/planlist.iml" filepath="$PROJECT_DIR$/../../web/planlist/planlist.iml" />
+    </modules>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_7" assert-keyword="true" jdk-15="true" project-jdk-name="1.7" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="" />
+    <mapping directory="$PROJECT_DIR$/../Utils" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../../web/planlist" vcs="Git" />
+  </component>
+</project>
