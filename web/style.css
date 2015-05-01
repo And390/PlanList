@@ -153,3 +153,8 @@ span.error
 {
     float: right;
 }
+
+.small
+{
+    font-size: 0.8em;
+}

@@ -28,7 +28,10 @@ public class DataAccess
 
     private final String path;  // with ending slash
 
-    public DataAccess(String path_)  {  if (!path_.endsWith("/"))  path_=path_+"/";  path=path_;  }
+    public DataAccess(String path_) throws IOException  {
+        if (!new File (path_).isDirectory())  throw new FileNotFoundException ("Directory does not exists: "+path_);
+        if (!path_.endsWith("/"))  path_=path_+"/";  path=path_;
+    }
 
 
 
@@ -212,7 +215,7 @@ public class DataAccess
     {
         if (user==null)  throw new UserException ("not logged in", 403);
         String planUser = planPath.substring(1, Util.indexOf(planPath, '/', 1));
-        if (!planUser.equals(user.name))  throw new UserException ("You have no access to other users' plans", 403);
+        if (!planUser.equals(user.name))  throw new UserException ("You have no access to other user's plans", 403);
     }
 
     private static void parsePlans(String plansContent, PlansParser parser) throws IOException, UserException

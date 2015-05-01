@@ -9,7 +9,6 @@
           <element id="directory" name="classes">
             <element id="module-output" name="Utils" />
             <element id="module-output" name="PlanList" />
-            <element id="module-output" name="WebAdmin" />
           </element>
           <element id="directory" name="lib">
             <element id="file-copy" path="$PROJECT_DIR$/../Java/lib/commons-io-2.2.jar" />
@@ -53,7 +52,6 @@
   </component>
   <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false">
     <file url="file://$PROJECT_DIR$" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/openshift/src/main/java/web/WebAuth.java" charset="windows-1251" />
     <file url="file://$PROJECT_DIR$/src" charset="windows-1251" />
     <file url="file://$PROJECT_DIR$/web/app.js" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/web/http.js" charset="UTF-8" />
@@ -107,7 +105,6 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/PlanList.iml" filepath="$PROJECT_DIR$/PlanList.iml" />
       <module fileurl="file://$PROJECT_DIR$/../Utils/Utils.iml" filepath="$PROJECT_DIR$/../Utils/Utils.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../WebAdmin/WebAdmin.iml" filepath="$PROJECT_DIR$/../WebAdmin/WebAdmin.iml" />
       <module fileurl="file://$PROJECT_DIR$/../../web/planlist/planlist.iml" filepath="$PROJECT_DIR$/../../web/planlist/planlist.iml" />
     </modules>
   </component>
@@ -116,6 +113,7 @@
   </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="" />
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../Utils" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../../web/planlist" vcs="Git" />
   </component>
