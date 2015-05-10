@@ -175,12 +175,12 @@
         this.addText = function createText(source, start, end)  {
             if (this.spanOpened)  {
                 var span = this.element.lastChild;
-                span.textContent += source.substring(start, end===source.length ? end : end+1);  // with \n if possible
+                span.textContent += source.substring(start, end===source.length ? end : end+1);  // так как \n в конце элемента с pre игнорируется, то лучше его добавлять, если он есть, плюс не нужно добавлять \n при конкатенации
                 span.e = end;
             }
             else  {
                 span = document.createElement("SPAN");
-                span.textContent = source.substring(start, end===source.length ? end : end+1);  // with \n if possible
+                span.textContent = source.substring(start, end===source.length ? end : end+1);
                 span.s = start;
                 span.e = end;
                 this.element.appendChild(span);

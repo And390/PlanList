@@ -121,20 +121,19 @@ function makeEditable(element, multiline, saveHandler, openHandler, closeHandler
 {
     element.onclick = function()  {
         var text = getInnerText(element);
-        generateEditable(text, text);
         //    вызвать обработчик
-        if (openHandler)  openHandler(text);
+        if (openHandler)  {
+            var newText = openHandler(text);
+            if (newText!==undefined)  text = newText;
+        }
+        //    make input
+        generateEditable(text, text);
     };
     function generateEditable(text, sourceText)
     {
-        //    есть ли переносы на новую строку
-        var hasLineBreaks = false;
-        if (multiline)  {
-            for (var i=0; i<text.length; i++)  if (text.charCodeAt(i)===10)  {  hasLineBreaks=true;  break;  }
-        }
         //    создать поле ввода
-        var input = document.createElement(hasLineBreaks ? "TEXTAREA" : "INPUT");
-        if (hasLineBreaks)  {
+        var input = document.createElement(multiline ? "TEXTAREA" : "INPUT");
+        if (multiline)  {
             //    для textarea надо убрать управляющие элементы
             input.style.overflow = "hidden";
             input.style.resize = "none";
@@ -145,15 +144,16 @@ function makeEditable(element, multiline, saveHandler, openHandler, closeHandler
         input.value = text;
         //    скопировать шрифт
         var style = getComputedStyle(element);
+        var savedDisplay = style.display;
         var savedPosition = style.position;
         var savedLeft = style.left;
         var savedTop = style.top;
+        var savedZIndex = style.zIndex;
+        //opcacity не трогаем - пусть input его затеняет
         var savedWhiteSpace = style.whiteSpace;
         input.style.fontFamily = style.fontFamily;
         input.style.fontSize = style.fontSize;
         input.style.lineHeight = style.lineHeight;
-        input.style.weight = style.weight;
-        input.style.style = style.style;
         //    скопировать позицию
         if (style.position=="absolute" || style.position=="relative" || style.position=="fixed")  {
             input.style.position = style.position;
@@ -168,11 +168,8 @@ function makeEditable(element, multiline, saveHandler, openHandler, closeHandler
         input.style.marginTop = (parseInt(style.marginTop) + parseInt(style.borderTopWidth) + parseInt(style.paddingTop)) + "px";
         input.style.marginRight = (parseInt(style.marginRight) + parseInt(style.borderRightWidth) + parseInt(style.paddingRight)) + "px";
         input.style.marginBottom = (parseInt(style.marginBottom) + parseInt(style.borderBottomWidth) + parseInt(style.paddingBottom)) + "px";
-        //    в качестве размеров указать размеры исходного текста (с учетом кода ниже уже не актуально, но можно оставить на будущее)
-        input.style.width = Math.floor(parseInt(style.width))+"px";
-        input.style.height = Math.floor(parseInt(style.height))+"px";
         //    заменить созданным полем исходный элемент
-        replaceElement(element, input);
+        insertAfter(input, element);
         //    только теперь getComputedStyle(input) будет содержать корректные значения
         var inputStyle = getComputedStyle(input);
         input.style.marginLeft = (parseInt(inputStyle.marginLeft) - parseInt(inputStyle.borderLeftWidth) - parseInt(inputStyle.paddingLeft)) + "px";
@@ -184,25 +181,34 @@ function makeEditable(element, multiline, saveHandler, openHandler, closeHandler
             restore(input.value, true, true);
         };
         function restore(text, save, close)  {
+            if (save && text!=sourceText && saveHandler)  {
+                var newText = saveHandler(text);
+                if (newText!==undefined)  text=newText;
+            }
+            if (close && closeHandler)  {
+                newText = closeHandler(text);
+                if (newText!==undefined)  text=newText;
+            }
             element.textContent = text;
             element.style.position = savedPosition;
             element.style.left = savedLeft;
             element.style.top = savedTop;
             element.style.whiteSpace = savedWhiteSpace;
-            replaceElement(input, element);
-            if (save && text!=sourceText && saveHandler)  saveHandler(text);
-            if (close && closeHandler)  closeHandler(text);
+            element.style.display = savedDisplay;
+            element.style.zIndex = savedZIndex;
+            removeElement(input);
         }
-        //    поместить input в body, но за пределы видимости, для динамического расчета ширины текста
+        //    поместить input за пределы видимости
         element.style.position = "absolute";
-        element.style.left = "-10000px";
-        element.style.top = "-10000px";
+        element.style.left = (element.offsetLeft-parseInt(style.marginLeft))+"px";
+        element.style.top = (element.offsetTop-parseInt(style.marginTop))+"px";
+        element.style.zIndex = -1000;
         element.style.whiteSpace = "pre";
-        document.body.appendChild(element);
+        element.style.display = "inline-block";
         //    менять ширину инпута при вводе
         input.oninput = function()
         {
-            element.textContent = input.value;
+            element.textContent = input.value + "\n";
             input.style.width = Math.floor(parseInt(style.width))+"px";    // element уже находится вне DOM, теоретически,
             input.style.height = Math.floor(parseInt(style.height))+"px";  // могут быть проблемы с ComputedStyle
         };
@@ -217,16 +223,10 @@ function makeEditable(element, multiline, saveHandler, openHandler, closeHandler
             //    нажали Ctrl+Enter - перенос на новую строку, если доступно
             else if (event.keyCode==13 && event.ctrlKey)  {
                 //
-                if (multiline)
-                    if (input.tagName=="INPUT")  {  // если сразу создавать TEXTAREA, от этой ветки можно вообще избавиться
-                        var text = input.value.substring(0, input.selectionStart) + "\n" + input.value.substring(input.selectionEnd);
-                        restore(text, false, false);
-                        generateEditable(text, sourceText);  //пересоздать (теперь уже textarea), sourceText должен остаться неизменный
-                    }
-                    else  {
-                        input.value = input.value.substring(0, input.selectionStart) + "\n" + input.value.substring(input.selectionEnd);
-                        input.oninput();
-                    }
+                if (multiline)  {
+                    input.value = input.value.substring(0, input.selectionStart) + "\n" + input.value.substring(input.selectionEnd);
+                    input.oninput();
+                }
             }
             //    нажали Enter - сохранение значения
             else if (event.keyCode==13)  {

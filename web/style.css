@@ -83,7 +83,7 @@ h1
     margin: 24px 0 16px 250px;
 }
 
-#content > h1:hover
+#content > h1 > span:hover
 {
     text-shadow: 2px 2px 2px rgba(64, 128, 255, 0.5);
 }

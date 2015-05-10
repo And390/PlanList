@@ -34,7 +34,7 @@
     <$ } $>
 
     <$ if (header) { $>
-        <h1>${header}</h1>
+        <h1><span>${header}</span></h1>
         <$/*<!--TODO если этому h1 прописать абсолютную позицию или добавить display: inline-block, то он перестанет уезжать после makeEditable-->*/$>
     <$ } $>
 
@@ -67,13 +67,14 @@
         parser.addTextSuper = parser.addText;
         parser.addText = function(source, start, end)  {
             var span = this.addTextSuper(source, start, end);
+            //
             makeEditable(span, true,
                 function (text) {
                     var result = [ source.substring(0, span.s) ];
                     //    скопировать все выравнивающие пробелы из исходного текста для всех имеющиихся строк
-                    text = text.trim();
-                    var s0=span.s, s1=-1;
-                    for (var i=0, si=span.s, se=span.e;;)  {
+                    var se=span.e;
+                    var s0=-1, s1=span.s;
+                    for (var i=0, si=s1;;)  {
                         //  найти следующую строку в полученном тексте
                         var i0 = i;
                         i = text.indexOf('\n', i) + 1;  if (i===0)  break;
@@ -87,15 +88,16 @@
                         result.push(text.substring(i0, i), source.substring(s0, s1));
                     }
                     //    добавить выравнивающие пробелы для новых строк, основываясь на последней строке
+                    var spaces = false;
                     while (i!==0)  {
                         //  если строка исходного текста была только одна, то надо посчитать количество выравнивающих пробелов
-                        var spaces;
-                        if (s1===-1)  {
-                            s1 = source.lastIndexOf('\n', s0-1) + 1;
-                            //  и заменить все на пробелы, так как теперь они могут встретиться
-                            spaces = source.substring(s0, s1).replace(/./g, ' ');
-                        }
-                        else  spaces = source.substring(s0, s1);
+                        if (!spaces)
+                            if (s0===-1)  {
+                                s0 = source.lastIndexOf('\n', s1-1) + 1;
+                                //  и заменить все на пробелы, так как теперь они могут встретиться
+                                spaces = source.substring(s0, s1).replace(/./g, ' ');
+                            }
+                            else  spaces = source.substring(s0, s1);
                         //  вставить предыдущую целевую строку, затем выравнивающие пробелы
                         result.push(text.substring(i0, i), spaces);
                         //  найти следующую строку в целевом тексте
@@ -105,15 +107,24 @@
                     //    вставить последнюю строку целевого текста
                     result.push(text.substring(i0));
                     //    и оставшуюся часть исходного текста
-                    result.push(source.substring(span.e));
+                    result.push(source.substring(se));
                     //    submit text
                     var plantext = result.join('');
-                    console.log(plantext);
                     element.plantext = plantext;
                     planSave.action = ajaxAction("?action=saveplan", plantext, "saved", function() {});
                 },
-                function (text)  {  element.itemEditing = true;  },
-                function (text)  {  element.itemEditing = false;  }
+                function (text)  {
+                    element.itemEditing = true;
+                    //    у нас может быть лишний \n в конце (последний игнорируется при отображении, поэтому и стоит), надо его удалить
+                    var last = text.length-1;
+                    if (text[last]==='\n')  text = text.substring(0, last);
+                    return text;
+                },
+                function (text)  {
+                    setTimeout(function() { element.itemEditing = false;  }, 100);
+                    //    вернуть отрубленный \n в конце
+                    return text+"\n";
+                }
             );
         };
         return parser;
@@ -134,7 +145,7 @@
             planlistProcess(element, element.plantext);
         }
         //    редактирование заголовка
-        element = document.getElementById("content").getElementsByTagName("h1")[0];
+        element = document.getElementById("content").getElementsByTagName("h1")[0].children[0];
         if (element)  {
             makeEditable(element, false, function(text) {
                 ajaxAction("?action=editplan&title="+encodeURIComponent(text), "", "saved", function() {});
@@ -177,7 +188,6 @@
     function planEdit(event)  {
         var element = getElement("plan");
         if (isPlanViewMode(element))  {
-            console.log("edit");
             element.innerHTML = "<textarea>"+escapeHTML(element.plantext)+"</textarea>";
             getElement("planEditButton").value = "save";
             getElement("planEditButton").onclick = planSave;
@@ -192,7 +202,6 @@
         var element = getElement("plan");
         if (isPlanEditMode(element))
         {
-            console.log("save");
             //    если текст изменился, то запрос на сохранение плана
             var plantext = element.children[0].value;
             if (element.plantext != plantext)  {
