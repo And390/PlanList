@@ -33,7 +33,7 @@
     {
         var url = document.location.href;
         var i = url.indexOf('?');
-        if (i!==-1 && !!(window.history && history.pushState))  history.pushState(null, null, url.substring(0, i));
+        if (i!==-1 && !!(window.history && history.pushState))  history.replaceState(null, null, url.substring(0, i));
     }
     window.onload = function ()  {
         removeLocationParameters();

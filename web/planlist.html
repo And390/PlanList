@@ -35,9 +35,10 @@
 
     <$ if (header) { $>
         <h1>${header}</h1>
+        <$/*<!--TODO если этому h1 прописать абсолютную позицию или добавить display: inline-block, то он перестанет уезжать после makeEditable-->*/$>
     <$ } $>
 
-    <div id="plan" ondblclick="planEdit(event)" onclick="event.cancelBubble=true;">${planlist}</div>
+    <div id="plan" onclick="event.cancelBubble=true; planEdit(event)">${planlist}</div>
     <input type="button" id="planEditButton" value="edit" onclick="planEdit(event)"><br>
 
     <div id="childs">
@@ -60,24 +61,94 @@
 
 
 <script type="text/javascript">
+    function createPlanlistParser(element)
+    {
+        var parser = new planlist.Parser (element, true);
+        parser.addTextSuper = parser.addText;
+        parser.addText = function(source, start, end)  {
+            var span = this.addTextSuper(source, start, end);
+            makeEditable(span, true,
+                function (text) {
+                    var result = [ source.substring(0, span.s) ];
+                    //    скопировать все выравнивающие пробелы из исходного текста для всех имеющиихся строк
+                    text = text.trim();
+                    var s0=span.s, s1=-1;
+                    for (var i=0, si=span.s, se=span.e;;)  {
+                        //  найти следующую строку в полученном тексте
+                        var i0 = i;
+                        i = text.indexOf('\n', i) + 1;  if (i===0)  break;
+                        //  найти следующую строку в исходном тексте
+                        si = source.indexOf('\n', si) + 1;  if (si===0 || si>se)  break;
+                        //  посчитать количество выравнивающих пробелов
+                        s0 = si;
+                        while (si<se && source.charCodeAt(si)<=32 && source.charCodeAt(si)!==10)  si++;
+                        s1 = si;
+                        //  вставить предыдущую целевую строку, затем выравнивающие пробелы от новой строки
+                        result.push(text.substring(i0, i), source.substring(s0, s1));
+                    }
+                    //    добавить выравнивающие пробелы для новых строк, основываясь на последней строке
+                    while (i!==0)  {
+                        //  если строка исходного текста была только одна, то надо посчитать количество выравнивающих пробелов
+                        var spaces;
+                        if (s1===-1)  {
+                            s1 = source.lastIndexOf('\n', s0-1) + 1;
+                            //  и заменить все на пробелы, так как теперь они могут встретиться
+                            spaces = source.substring(s0, s1).replace(/./g, ' ');
+                        }
+                        else  spaces = source.substring(s0, s1);
+                        //  вставить предыдущую целевую строку, затем выравнивающие пробелы
+                        result.push(text.substring(i0, i), spaces);
+                        //  найти следующую строку в целевом тексте
+                        i0 = i;
+                        i = text.indexOf('\n', i) + 1;
+                    }
+                    //    вставить последнюю строку целевого текста
+                    result.push(text.substring(i0));
+                    //    и оставшуюся часть исходного текста
+                    result.push(source.substring(span.e));
+                    //    submit text
+                    var plantext = result.join('');
+                    console.log(plantext);
+                    element.plantext = plantext;
+                    planSave.action = ajaxAction("?action=saveplan", plantext, "saved", function() {});
+                },
+                function (text)  {  element.itemEditing = true;  },
+                function (text)  {  element.itemEditing = false;  }
+            );
+        };
+        return parser;
+    }
+    function planlistProcess(element, text)
+    {
+        element.innerHTML = "";
+        planlist.parse(text, createPlanlistParser(element));
+        element.style.whiteSpace = 'pre-wrap';
+    }
+
+    window.onload = function ()  {
+        replaceAddress("${app}${path}");
+        //    преобразовать исходный текст плана в html
+        var element = document.getElementById("plan");
+        if (element)  {
+            element.plantext = element.innerHTML;
+            planlistProcess(element, element.plantext);
+        }
+        //    редактирование заголовка
+        element = document.getElementById("content").getElementsByTagName("h1")[0];
+        if (element)  {
+            makeEditable(element, false, function(text) {
+                ajaxAction("?action=editplan&title="+encodeURIComponent(text), "", "saved", function() {});
+            })
+        }
+    };
+
     // убирает параметры запроса браузера для этой страницы
     function removeLocationParameters()
     {
         var url = document.location.href;
         var i = url.indexOf('?');
-        if (i!==-1 && !!(window.history && history.pushState))  history.pushState(null, null, url.substring(0, i));
+        if (i!==-1)  replaceAddress(url.substring(0, i))
     }
-    window.onload = function ()  {
-        //removeLocationParameters();
-        history.pushState(null, null, "${app}${path}");
-        //
-        var element = document.getElementById("plan");
-        if (element)  {
-            element.plantext = element.innerHTML;
-            planlist.process(element, true);
-            element.className = "make_plan";
-        }
-    };
 
     function bodyKeyDown(event)  {
         // по Ctrl+Enter переключение режима (сохранение или редактирование плана в зависимости от текущего режима)
@@ -97,16 +168,16 @@
     }
 
     function isPlanViewMode(element)  {
-        return element && !(element.children[0] && element.children[0].tagName=="TEXTAREA");
+        return element && !element.itemEditing && !(element.children[0] && element.children[0].tagName=="TEXTAREA");
     }
     function isPlanEditMode(element)  {
-        return element && element.children[0] && element.children[0].tagName=="TEXTAREA" && !ajaxAction.executing[planSave.action];
+        return element && !element.itemEditing && element.children[0] && element.children[0].tagName=="TEXTAREA" && !ajaxAction.executing[planSave.action];
     }
 
     function planEdit(event)  {
         var element = getElement("plan");
         if (isPlanViewMode(element))  {
-            console.log("planEdit");
+            console.log("edit");
             element.innerHTML = "<textarea>"+escapeHTML(element.plantext)+"</textarea>";
             getElement("planEditButton").value = "save";
             getElement("planEditButton").onclick = planSave;
@@ -121,7 +192,7 @@
         var element = getElement("plan");
         if (isPlanEditMode(element))
         {
-            console.log("planSave");
+            console.log("save");
             //    если текст изменился, то запрос на сохранение плана
             var plantext = element.children[0].value;
             if (element.plantext != plantext)  {
@@ -137,7 +208,8 @@
 
         // отображает план
         function displayPlan()  {
-            element.innerHTML = planlist.processText(plantext, true);
+            element.innerHTML = "";
+            planlistProcess(element, plantext);
             getElement("planEditButton").value = "edit";
             getElement("planEditButton").onclick = planEdit;
         }

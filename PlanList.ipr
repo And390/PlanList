@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ArtifactManager">
-    <artifact type="exploded-war" name="PlanList">
-      <output-path>$PROJECT_DIR$/out/PlanList</output-path>
+    <artifact type="exploded-war" name="planlist">
+      <output-path>$PROJECT_DIR$/out/planlist</output-path>
       <root id="root">
         <element id="dir-copy" path="$PROJECT_DIR$/web" />
         <element id="directory" name="WEB-INF">
@@ -16,14 +16,13 @@
           </element>
         </element>
         <element id="file-copy" path="$PROJECT_DIR$/../../web/planlist/favicon.ico" />
-        <element id="file-copy" path="$PROJECT_DIR$/../../web/planlist/planlist.js" />
         <element id="file-copy" path="$PROJECT_DIR$/../../web/locatejs/locate.js" />
       </root>
     </artifact>
-    <artifact type="war" name="PlanList.war">
+    <artifact type="war" name="planlist.war">
       <output-path>$PROJECT_DIR$/out/</output-path>
       <root id="archive" name="PlanList.war">
-        <element id="artifact" artifact-name="PlanList" />
+        <element id="artifact" artifact-name="planlist" />
       </root>
     </artifact>
   </component>

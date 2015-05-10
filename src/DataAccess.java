@@ -106,16 +106,18 @@ public class DataAccess
     public void editPlan(PlanListService.User user, String fullPath, String name_, String title_) throws UserException, IOException
     {
         //    проверки
-        int p = fullPath.lastIndexOf('/');
-        final String name = name_!=null ? checkPlanName(name_) : p==0 ? "" : fullPath.substring(p+1);
-        if (p==0 && !name.equals(""))  throw new UserException ("It is not possible to change root plan name");
+        int l = fullPath.lastIndexOf('/');       //указатель на последний слэш
+        int p = l==0 ? fullPath.length() : l+1;  //указатель на начало имени плана в строке fullPath
+        if (l==-1 || !fullPath.startsWith("/"))  throw new IllegalArgumentException ("Wrong fullPath: "+fullPath);
+        if (l==0 && name_!=null)  throw new UserException ("It is not possible to change root plan name");
+        final String name = name_!=null ? checkPlanName(name_) : fullPath.substring(p);
         final String title = checkPlanTitle(title_);
         checkPlanOwner(user, fullPath);
         //    разложить полный путь на имя и путь относительно пользователя
         int s = Util.indexOf(fullPath, '/', 1);
         final String username = fullPath.substring(1, s);
         final String oldPlanPath = fullPath.substring(s);
-        final String newPlanPath = Util.startsWithPath(fullPath, name, p+1) ? null : fullPath.substring(s, p+1) + name;  // null, если имена эквивалентны
+        final String newPlanPath = Util.startsWithPath(fullPath, name, p) ? null : fullPath.substring(s, p) + name;  // null, если имена эквивалентны
         //    переписать файл plans
         File userDir = getUserDir(username);
         processPlans(userDir, fullPath, new PlansProcessor()  {
@@ -207,7 +209,7 @@ public class DataAccess
     {
         for (char c : title.toCharArray())  if (c=='\t' || c=='\n' || c=='\r')
             throw new UserException("Plan title must not contain tab and line breaks");
-        return title.toLowerCase();
+        return title;
     }
 
     // TODO плохо, что в DataAccess коды http
@@ -475,7 +477,6 @@ public class DataAccess
     }
     private void login(String username, String password, File passwordFile) throws UserException, IOException
     {
-        username = username.toLowerCase();
         //    проверить, что пользователь существует (если существует его файл с паролем)
         if (!passwordFile.exists())  throw new UserException("Wrong username or password");
         //    прочитать пароль из файла

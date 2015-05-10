@@ -183,11 +183,11 @@ function getElement(element)  {
     return element;
 }
 
-function removeChild(child)  {
+function removeElement(child)  {
     child.parentNode.removeChild(child);
 }
 
-function replaceChild(oldChild, newChild)  {
+function replaceElement(oldChild, newChild)  {
     oldChild.parentNode.replaceChild(newChild, oldChild);
 }
 
@@ -228,7 +228,7 @@ function getTopInnerText(element)  {
     return result.join("");
 }
 
-function getOffsetPos(elem)
+function getOffset(elem)
 {
     // from http://javascript.ru/ui/offset
 
@@ -248,43 +248,13 @@ function getOffsetPos(elem)
 
     // Прибавляем к координатам относительно окна прокрутку и вычитаем сдвиг html/body,
     // чтобы получить координаты относительно документа
-    var top  = box.top +  scrollTop - clientTop;
-    var left = box.left + scrollLeft - clientLeft;
+    // Для Firefox дополнительно округляем координаты
+    var top = Math.round(box.top + scrollTop - clientTop);
+    var left = Math.round(box.left + scrollLeft - clientLeft);
+    var width = Math.round(box.width);
+    var height = Math.round(box.height);
 
-    // Для Firefox дополнительно мы округляем координаты вызовом Math.round()
-    return { top: Math.round(top), left: Math.round(left) }
-}
-
-//    Тоже самое по одной left
-function getOffsetLeft(element)
-{
-    var body = document.body;
-    var docElem = document.documentElement;
-    //  1.
-    var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft;
-    //  2.
-    var clientLeft = docElem.clientLeft || body.clientLeft || 0;
-    //  3.
-    var box = element.getBoundingClientRect();
-    var left = box.left + scrollLeft - clientLeft;
-    //  4.
-    return Math.round(left);
-}
-
-//    Тоже самое по одной Top
-function getOffsetTop(element)
-{
-    var body = document.body;
-    var docElem = document.documentElement;
-    //  1.
-    var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop;
-    //  2.
-    var clientTop = docElem.clientTop || body.clientTop || 0;
-    //  3.
-    var box = element.getBoundingClientRect();
-    var top  = box.top + scrollTop - clientTop;
-    //  4.
-    return Math.round(top);
+    return {  left: left, top: top, width: width, height: height, right: left+width, bottom: top+height  };
 }
 
 // скролл-позиция окна
@@ -343,7 +313,7 @@ function getTextMetrics(text, style, addStyle)
     return result;
 }
 
-// возвращает размеры элемента, если бы он находился вне родительских элементов и далеко от границ экран
+// возвращает размеры элемента, если бы он находился вне родительских элементов и далеко от границ экрана
 // (но с учетом рассчитанного стиля для себя и дочерних элементов)
 // TODO getElementMetrics стоит получше протестировать на таблицах - в разных браузерах есть ошибка в несколько пикселей
 function getElementMetrics(sourceElement, addStyle)
@@ -406,3 +376,7 @@ function fireEvent(element, event)
     }
 }
 
+function replaceAddress(url)
+{
+    if (!!(window.history && history.replaceState))  history.replaceState(null, null, url);
+}

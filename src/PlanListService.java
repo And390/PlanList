@@ -65,27 +65,28 @@ public class PlanListService implements Filter
     {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
-        String context = request.getContextPath();
-        String path = request.getRequestURI().substring(context.length());
-        path = java.net.URLDecoder.decode(path, "UTF-8");
-        if (!path.startsWith("/"))  path = '/'+path;
         //    try process
-        try  {  if (processRequest(request, response, path))  return;  }
+        try  {  if (processRequest(request, response))  return;  }
         catch (IOException|ServletException|RuntimeException e)  {  throw e;  }
         catch (Exception e)  {  throw new ServletException (e);  }
         //    default process if function returns false
         filterChain.doFilter(servletRequest, servletResponse);
     }
 
-    public boolean processRequest(HttpServletRequest request, HttpServletResponse response, String path) throws Exception
+    public boolean processRequest(HttpServletRequest request, HttpServletResponse response) throws Exception
     {
+        //    get request path
+        String context = request.getContextPath();
+        String path = request.getRequestURI().substring(context.length());
+        path = java.net.URLDecoder.decode(path, "UTF-8");
+        if (path.equals("/"))  path = "";
+        else if (!path.startsWith("/"))  path = '/'+path;  // в таком виде уже должен возвращаться сервером
+
         //    не-html файлы не из каталога data с непустым расширением отдаются по умолчанию
-        if (!path.equals("/") && !(webDataDir!=null && Util.startsWithPath(path, webDataDir))
+        if (!path.equals("") && !(webDataDir!=null && Util.startsWithPath(path, webDataDir))
                 && path.indexOf('.')!=-1 && !path.endsWith(".html"))  {
             return false;
         }
-        //    нормализовать путь
-        path = Util.cutIfEnds(path, "/");
 
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
@@ -98,9 +99,9 @@ public class PlanListService implements Filter
             if (request.getParameter("register")!=null)
             {
                 //    достать параметры
-                String username = getNotEmpty(request, "register");
-                String password = getNotEmpty(request, "password");
-                boolean remember = getFlag(request, "remember");
+                String username = getNotEmpty(request, "register", true);
+                String password = getNotEmpty(request, "password", true);
+                boolean remember = getFlag(request, "remember", true);
                 //    зарегистрировать пользователя
                 dataAccess.register(username, password);
                 //    положить в сессию и для текущего запроса
@@ -113,9 +114,9 @@ public class PlanListService implements Filter
             if (request.getParameter("login")!=null)
             {
                 //    достать параметры
-                String username = getNotEmpty(request, "login");
-                String password = getNotEmpty(request, "password");
-                boolean remember = getFlag(request, "remember");
+                String username = getNotEmpty(request, "login", true);
+                String password = getNotEmpty(request, "password", true);
+                boolean remember = getFlag(request, "remember", true);
                 //    проверить логин-пароль
                 dataAccess.login(username, password);
                 //    положить в сессию и для текущего запроса
@@ -131,7 +132,7 @@ public class PlanListService implements Filter
                 user = null;
             }
         }
-        catch (UserException e)  {  error = e.getMessage();  }
+        catch (ClientException e)  {  error = e.getUserMessage();  }
         catch (Exception e)  {  logger.log(e);  error = "Internal server error";  }
 
         //        ----    обработка ajax actions    ----
@@ -141,19 +142,21 @@ public class PlanListService implements Filter
             String result = "success:";
             try
             {
+                //    нормализовать путь
+                path = Util.cutIfEnds(path, "/");
+                if (!path.equals(path.toLowerCase()))  throw new ClientException ("Path must be lowercase: "+path);
                 //    сохранить содержимое плана
                 if (action.equals("saveplan"))
                 {
                     String planContent = getPost(request);
                     //    сохранить
-                    path = Util.cutIfEnds(path, "/");
-                    if (!dataAccess.savePlanContent(user, path, planContent))  throw new UserException ("Plan does not exists", 404);
+                    if (!dataAccess.savePlanContent(user, path, planContent))  throw new ClientException ("Plan does not exists", true, 404);
                 }
                 //    добавить план
                 else if (action.equals("addplan"))
                 {
-                    String name = getNotEmpty(request, "name");
-                    String title = getNotEmpty(request, "title");
+                    String name = getNotEmpty(request, "name", false);
+                    String title = getNotEmpty(request, "title", false);
                     dataAccess.addPlan(user, path, name, title, "");
                 }
                 //    удалить план
@@ -164,8 +167,8 @@ public class PlanListService implements Filter
                 //    удалить план
                 else if (action.equals("editplan"))
                 {
-                    String name = getNotEmpty(request, "name");
-                    String title = getNotEmpty(request, "title");
+                    String name = getNotEmptyIfExists(request, "name", false);
+                    String title = getNotEmpty(request, "title", false);
                     dataAccess.editPlan(user, path, name, title);
                 }
                 //    неиззвестный action
@@ -175,7 +178,7 @@ public class PlanListService implements Filter
             //    error
             catch (ClientException e)  {
                 logger.log(e.getMessage());
-                result = (e instanceof UserException ? "error:user:" : "error:client:") + e.getMessage();
+                result = (e.user ? "error:user:" : "error:client:") + e.getMessage();
                 response.setStatus(e.statusCode);
             }
             catch (Exception e)  {
@@ -200,6 +203,13 @@ public class PlanListService implements Filter
         }
         else try
         {
+            //    redirect, при неправильных path
+            String truePath = Util.cutIfEnds(path, "/").toLowerCase();
+            if (!path.equals(truePath))  {
+                response.setStatus(301);
+                response.setHeader("Location", context+truePath);
+                return true;
+            }
             //    страница пользователя
             if (user!=null)
             {
@@ -209,7 +219,7 @@ public class PlanListService implements Filter
                 planContent = dataAccess.loadPlanContent(user, path);
                 if (planContent==null)  {
                     response.setStatus(404);
-                    throw new UserException("Wrong link to resource "+path);
+                    throw new ClientException ("Wrong link to resource "+path, true);
                 }
                 //    прочитать мета-информацию о выбранном плане и его непосредственных детях, если он не имеет родителя,
                 //    если имеет, то нужна еще информация о его родителе
@@ -229,12 +239,12 @@ public class PlanListService implements Filter
                 }
             }
         }
-        catch (UserException e)  {  error = e.getMessage();  }
+        catch (ClientException e)  {  error = e.getUserMessage();  }
         catch (Exception e)  {  logger.log(e);  response.setStatus(500);  error = "Internal server error";  }
 
         //    set bindings
         Bindings bindings = new SimpleBindings();
-        bindings.put("app", request.getContextPath());
+        bindings.put("app", context);
         bindings.put("path", path);
         bindings.put("error", error);
         bindings.put("user", user);
@@ -260,6 +270,11 @@ public class PlanListService implements Filter
 
     //    util
 
+    public static String getIfExists(HttpServletRequest request, String name) throws ClientException
+    {
+        return request.getParameter(name);
+    }
+
     public static String get(HttpServletRequest request, String name) throws ClientException
     {
         String value = request.getParameter(name);
@@ -267,21 +282,33 @@ public class PlanListService implements Filter
         return value;
     }
 
-    public static String getNotEmpty(HttpServletRequest request, String name) throws ClientException
+    public static String getNotEmpty(HttpServletRequest request, String name, boolean user) throws ClientException
     {
         String value = get(request, name);
-        if (value.length()==0)  throw new UserException("Empty \""+name+"\" parameter");
+        notEmpty(value, name, user);
         return value;
     }
 
-    public static boolean getFlag(HttpServletRequest request, String name) throws ClientException
+    public static String getNotEmptyIfExists(HttpServletRequest request, String name, boolean user) throws ClientException
+    {
+        String value = request.getParameter(name);
+        if (value!=null)  notEmpty(value, name, user);
+        return value;
+    }
+
+    public static void notEmpty(String value, String name, boolean user) throws ClientException
+    {
+        if (value.length()==0)  throw new ClientException("Empty \""+name+"\" parameter", user);
+    }
+
+    public static boolean getFlag(HttpServletRequest request, String name, boolean user) throws ClientException
     {
         String value = request.getParameter(name);
         if (value==null)  return false;
         String v = value.toLowerCase();
         if (v.equals("true") || v.equals("on") || v.equals("yes") || v.equals("1"))  return true;
         if (v.equals("false") || v.equals("off") || v.equals("no") || v.equals("0"))  return true;
-        throw new UserException("Wrong \""+name+"\" parameter value: "+value);
+        throw new ClientException("Wrong \""+name+"\" parameter value: "+value, user);
     }
 
     public static String getPost(HttpServletRequest request) throws IOException  {
