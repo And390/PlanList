@@ -498,11 +498,18 @@ public class DataAccess
         savePassword(username, password, new File (userDir, "password"));
         //    создать корневой план
         Util.write(new File (userDir, ".txt"),
-                " - this is your plan example\n" +
-                "   - add tasks\n" +
-                "     - add sub items by indent it with spaces\n" +
-                "   + mark it as completed\n" +
-                "   | or set any other supported mark\n", PLAN_ENCODING);
+                "Use Edit button, Ctrl+E, Ctrl+Enter or click on empty space on the sides of this text to edit full plan\n" +
+                "Use Save button, Ctrl+S, Ctrl+Enter or click on empty space on the sides of this text to save edition and return view\n" +
+                "Use Cancel button or Esc to cancel changes\n" +
+                "You can edit single records by clicking on them\n" +
+                "You can change marker by clicking on them\n" +
+                " - This is a plan example\n" +
+                "   - try to modify it\n" +
+                "   * look at another markers\n" +
+                "   - remove it and write your own\n" +
+                "\n" +
+                "It is possible to hierarchically create child plan pages\n" +
+                "The following buttons (only one 'Add' for now) are used for this", PLAN_ENCODING);
         Util.write(new File (userDir, "plans"), "\tMy plans", PLAN_ENCODING);
     }
 

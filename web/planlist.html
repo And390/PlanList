@@ -20,6 +20,9 @@
     .plannode-button  {
         background-image: url('${app}/buttons.png');
     }
+    #plan .button  {
+        background-image: url('${app}/buttons_16.png');
+    }
 </style>
 
 
@@ -39,7 +42,10 @@
     <$ } $>
 
     <div id="plan" onclick="event.cancelBubble=true; planEdit(event)">${planlist}</div>
-    <input type="button" id="planEditButton" value="edit" onclick="planEdit(event)"><br>
+    <input type="button" id="planEditButton" value="edit" onclick="planEdit(event)">
+    <input type="button" id="planCancelButton" value="cancel" onclick="planCancel(event)" style="display: none">
+    <input type="button" id="planSaveButton" value="save" onclick="planSave(event)" style="display: none">
+    <br>
 
     <div id="childs">
         <$ if (childs) for (var i=0; i< childs.length; i++) { $>
@@ -52,7 +58,7 @@
         <span class="plannode-button add" onclick="addChildPlan(this)" style="margin-top: 8px">&nbsp;</span>
     </div>
     <$ if (parent) { $>
-        <a class="plannode" href="${context+path.substring(0, path.lastIndexOf('/'))}">${parent.title}</a><br>
+        <a class="plannode" href="${app+path.substring(0, path.lastIndexOf('/'))}">${parent.title}</a><br>
     <$ } $>
 </div>
 
@@ -61,11 +67,125 @@
 
 
 <script type="text/javascript">
+
+    window.onload = function ()  {
+        replaceAddress("${app}${path}");
+        //    преобразовать исходный текст плана в html
+        var element = document.getElementById("plan");
+        if (element)  {
+            element.plantext = element.innerHTML;
+            planlistProcess(element, element.plantext);
+        }
+        //    редактирование заголовка
+        element = document.getElementById("content").getElementsByTagName("h1")[0].children[0];
+        if (element)  {
+            makeEditable(element, false, function(text) {
+                ajaxAction("?action=editplan&title="+encodeURIComponent(text), "", "saved", function() {});
+            })
+        }
+    };
+
+    // убирает параметры запроса браузера для этой страницы
+    function removeLocationParameters()
+    {
+        var url = document.location.href;
+        var i = url.indexOf('?');
+        if (i!==-1)  replaceAddress(url.substring(0, i))
+    }
+
+    //        ----    plan list editing    ----
+
+    function planlistProcess(element, text)
+    {
+        element.innerHTML = "";
+        planlist.parse(text, createPlanlistParser(element));
+        element.style.whiteSpace = 'pre-wrap';
+        //    в случае пустого текста нужно добавить кнопку добавления
+        if (text=="")  {
+            element.appendChild(createNode({tagName: "SPAN", className: "button append", onclick: function (event)  {
+                //    добавить строку с выравнивающими пробелами, после которых идет маркер
+                var result = '- ';
+                //    сохранить и перестроить DOM
+                planSaveAction(result);
+                planlistProcess(element, result);
+                //    перейти к полю ввода
+                element.children[0].children[0].children[1].onclick();
+            }}));
+        }
+    }
+
     function createPlanlistParser(element)
     {
         var parser = new planlist.Parser (element, true);
         parser.addTextSuper = parser.addText;
+        parser.addItemSuper = parser.addItem;
+        parser.addItem = function(marker, source, pos)  {
+            var item = this.addItemSuper(marker, source, pos);
+            var itemMark = item.children[0];
+            var markPanel = document.createElement("SPAN");
+            markPanel.className = "mark-panel";
+            itemMark.appendChild(markPanel);
+            var MARKERS = ["absent", "inwork", "done",   "frozen", "discard", "question",   "bury", "future", "idea",   "burning", "warning", "detail",  "none", "none", "bullet"];
+            for (var i=0; i<MARKERS.length; i++)  {
+                var mark = document.createElement("SPAN");
+                mark.className = "mark "+MARKERS[i];
+                markPanel.appendChild(mark);
+                if (i%3===2)  markPanel.appendChild(document.createElement("BR"));
+                mark.markChar = planlist.MARKER_CHARS[planlist.MARKERS.indexOf(MARKERS[i])];
+                mark.onclick = function(event)
+                {
+                    // прекратить дальнешую обработку события
+                    event.stopPropagation();
+                    // заменить маркер
+                    itemMark.className = this.className;
+                    if (this.markChar)  {
+                        var result = source.substring(0, pos) + this.markChar[0] + source.substring(pos+1);
+                        // сохранить
+                        planSaveAction(result);
+                    }
+                    // выбрав none, можно удалить маркер
+                    else  {
+                        result = source.substring(0, pos) + " " + source.substring(pos+1);
+                        // сохранить
+                        planSaveAction(result);
+                        //    перестроить DOM (из-за того, что позиции сбиты; в целях оптимизации, можно было бы исправить только их)
+                        //planlistProcess(element, result);
+                    }
+                };
+            }
+            itemMark.fastMarkers = ["absent", "done", "inwork"];
+            itemMark.onclick = function(event)
+            {
+                // прекратить дальнешую обработку события
+                event.stopPropagation();
+                // заменить маркер
+                var MARKERS_COLLECTIONS = [ itemMark.fastMarkers, planlist.MARKERS ];
+                for (var mc=0; mc<MARKERS_COLLECTIONS.length; mc++)  {
+                    var markers = itemMark.fastMarkers = MARKERS_COLLECTIONS[mc];
+                    var mark = itemMark.className.substring("mark ".length);
+                    var m = markers.indexOf(mark) + 1;
+                    if (m!==0)  {
+                        mark = m===markers.length ? markers[0] : markers[m];
+                        itemMark.className = "mark "+mark;
+                        // сохранить и выйти
+                        var markChar = planlist.MARKER_CHARS[planlist.MARKERS.indexOf(mark)];
+                        if (markChar)  {
+                            var result = source.substring(0, pos) + markChar[0] + source.substring(pos+1);
+                            planSaveAction(result);
+                            break;
+                        }
+                    }
+                }
+            };
+        };
         parser.addText = function(source, start, end)  {
+            //    удалить управляющие кнопки
+            for (var button=this.element.lastElementChild; button && hasClass(button, "button"); )  {
+                var next = button.previousElementSibling;
+                removeNode(button);
+                button = next;
+            }
+            //
             var span = this.addTextSuper(source, start, end);
             //
             makeEditable(span, true,
@@ -110,8 +230,9 @@
                     result.push(source.substring(se));
                     //    submit text
                     var plantext = result.join('');
-                    element.plantext = plantext;
-                    planSave.action = ajaxAction("?action=saveplan", plantext, "saved", function() {});
+                    planSaveAction(plantext);
+                    //    перестроить DOM (из-за того, что позиции сбиты; в целях оптимизации, можно было бы исправить только их)
+                    planlistProcess(element, plantext);
                 },
                 function (text)  {
                     element.itemEditing = true;
@@ -126,39 +247,58 @@
                     return text+"\n";
                 }
             );
+            //    добавить управляющие кнопки
+            var listItem = this.element;
+            fillupNodes(listItem,
+                {tagName: "SPAN", className: "button insert", onclick: getAddButtonHandler(true)},
+                {tagName: "SPAN", className: "button append", onclick: getAddButtonHandler(false)},
+                {tagName: "SPAN", className: "button remove", onclick: removeButtonHandler}
+            );
+            function getAddButtonHandler(inside)  {
+                return function(event) {
+                    event.stopPropagation();
+                    //    найти выравнивающие пробелы и позицию вставки
+                    var i1 = listItem.s;  //позиция маркера
+                    var i0 = source.lastIndexOf('\n', i1-1) + 1;  //начало строки, на которой находится маркер (перед ним пробелы)
+                    var i2 = span.e;  //конец элемента, после которого надо вставить
+                    //    добавить строку с выравнивающими пробелами, после которых идет маркер
+                    var result = source.substring(0, i2) + '\n' + source.substring(i0, i1) +
+                            (inside ? "    " : "") + '- ' + source.substring(i2);
+                    //    сохранить и перестроить DOM
+                    planSaveAction(result);
+                    planlistProcess(element, result);
+                    //    найти вставленный элемент, и запустить на нем пользовательский ввод
+                    var pos = i2 + 1 + (i1-i0) + (inside ? 4 : 0);
+                    iterateNodes(element, function(element)  {
+                        if (element.s===pos)  {
+                            element.children[1].onclick();
+                            return true;
+                        }
+                        return false;
+                    });
+                }
+            }
+            function removeButtonHandler(event)  {
+                event.stopPropagation();
+                //    взять позиции удаляемого текста, найти начало строки
+                var i1 = span.s;
+                i1 = source.lastIndexOf('\n', i1-1);
+                var i2 = span.e;
+                if (i1===-1)  i2++;  //если в начале нет \n, то попытаться взять его с конца
+                //    удалить
+                var result = source.substring(0, i1) + source.substring(i2);
+                //    сохранить и перестроить DOM
+                planSaveAction(result);
+                planlistProcess(element, result);
+            }
         };
         return parser;
     }
-    function planlistProcess(element, text)
-    {
-        element.innerHTML = "";
-        planlist.parse(text, createPlanlistParser(element));
-        element.style.whiteSpace = 'pre-wrap';
-    }
 
-    window.onload = function ()  {
-        replaceAddress("${app}${path}");
-        //    преобразовать исходный текст плана в html
-        var element = document.getElementById("plan");
-        if (element)  {
-            element.plantext = element.innerHTML;
-            planlistProcess(element, element.plantext);
-        }
-        //    редактирование заголовка
-        element = document.getElementById("content").getElementsByTagName("h1")[0].children[0];
-        if (element)  {
-            makeEditable(element, false, function(text) {
-                ajaxAction("?action=editplan&title="+encodeURIComponent(text), "", "saved", function() {});
-            })
-        }
-    };
-
-    // убирает параметры запроса браузера для этой страницы
-    function removeLocationParameters()
-    {
-        var url = document.location.href;
-        var i = url.indexOf('?');
-        if (i!==-1)  replaceAddress(url.substring(0, i))
+    function planSaveAction(plantext, handler)  {
+        if (!handler)  handler = function() {};
+        planSave.action = ajaxAction("?action=saveplan", plantext, "saved", handler);
+        getElement("plan").plantext = plantext;
     }
 
     function bodyKeyDown(event)  {
@@ -168,13 +308,17 @@
             if (isPlanViewMode(element))  planEdit(event);
             else if (isPlanEditMode(element))  planSave(event);
         }
-        // по Ctrl+S или Esc сохранение
-        else if (event.ctrlKey && event.keyCode=='S'.charCodeAt(0) || event.keyCode==27)  {
+        // по Ctrl+S
+        else if (event.ctrlKey && event.keyCode=='S'.charCodeAt(0))  {
             planSave(event);
         }
         // по Ctrl+E редактирование
         else if (event.ctrlKey && event.keyCode=='E'.charCodeAt(0))  {
             planEdit(event);
+        }
+        // по Esc отмена
+        else if (event.keyCode==27)  {
+            planCancel(event);
         }
     }
 
@@ -189,11 +333,24 @@
         var element = getElement("plan");
         if (isPlanViewMode(element))  {
             element.innerHTML = "<textarea>"+escapeHTML(element.plantext)+"</textarea>";
-            getElement("planEditButton").value = "save";
-            getElement("planEditButton").onclick = planSave;
+            getElement("planEditButton").style.display = "none";
+            getElement("planCancelButton").style.display = "inline";
+            getElement("planSaveButton").style.display = "inline";
             element.children[0].focus();
             //    прекратить дальнешую обработку события и стандартные действия
             event.stopPropagation();
+            event.preventDefault();
+        }
+    }
+
+    function planCancel(event)  {
+        var element = getElement("plan");
+        if (isPlanEditMode(element))
+        {
+            //    отобразить план
+            planView(element, element.plantext);
+            //    прекратить дальнешую обработку события и стандартные действия
+            event.stopPropagation();  // нужно, так как стоит onclick на весь body
             event.preventDefault();
         }
     }
@@ -204,25 +361,27 @@
         {
             //    если текст изменился, то запрос на сохранение плана
             var plantext = element.children[0].value;
-            if (element.plantext != plantext)  {
-                element.plantext = plantext;
-                planSave.action = ajaxAction("?action=saveplan", plantext, "saved", displayPlan);
-            }
+            if (element.plantext != plantext)  planSaveAction(plantext, doPlanView);
             //    иначе, просто отобразить
-            else  displayPlan();
+            else  doPlanView();
             //    прекратить дальнешую обработку события и стандартные действия
             event.stopPropagation();  // нужно, так как стоит onclick на весь body
             event.preventDefault();
         }
 
-        // отображает план
-        function displayPlan()  {
-            element.innerHTML = "";
-            planlistProcess(element, plantext);
-            getElement("planEditButton").value = "edit";
-            getElement("planEditButton").onclick = planEdit;
-        }
+        function doPlanView()  {  planView(element, plantext);  }
     }
+
+    // отображает план
+    function planView(element, plantext)  {
+        planlistProcess(element, plantext);
+        getElement("planCancelButton").style.display = "none";
+        getElement("planSaveButton").style.display = "none";
+        getElement("planEditButton").style.display = "inline";
+    }
+
+
+    //        ----    child plan editing    ----
 
     function addChildPlan(element)
     {
@@ -242,7 +401,7 @@
         element = element.parentNode;  //get total row
         var name = element.children[0].getAttribute("href");
         ajaxAction(encodeURIComponent(name)+"?action=deleteplan", "", "deleted", function () {
-            removeChild(element);
+            removeNode(element);
         });
     }
 

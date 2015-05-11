@@ -7,14 +7,33 @@
 <body>
 
 
+<style>
+    body  {
+        margin-top: 80px;
+        margin-left: 200px;
+        width: 700px;
+    }
+    p  {
+        text-align: justify
+    }
+</style>
+
 <h3>User Interface</h3>
 <p>
     При открытии страницы вы видите свой список задач в режиме просмотра.
-    Для переключения в режим редактирования,
-    нужно нажать на кнопку Edit, кликнуть по плану двойным щелчком или нажать клавиши Ctrl+Enter или Ctrl+E.
-    Чтобы выйти из режима редактирования,
-    нужно нажать на кнопку Save, кликнуть на любом свободном месте или нажать клавиши Ctrl+Enter, Ctrl+S или Esc.
-    При этом план будет сохранен на сервер.
+    Для переключения в режим редактирования, нужно нажать на кнопку Edit,
+    кликнуть по пустому месту напротив списка задач или нажать клавиши Ctrl+Enter или Ctrl+E.
+    Чтобы выйти из режима редактирования, нужно нажать на кнопку Save,
+    кликнуть на любом свободном месте или нажать клавиши Ctrl+Enter или Ctrl+S.
+    При этом план будет сохранен на сервер. Выйти из режима редактирования, не сохраняя сделанные изменения,
+    можно нажатием на кнопку Cancel или клавишу Esc.
+</p>
+<p>
+    Можно редактировать отдельные записи (элементы плана), кликнув на них.
+    При этом Enter сохраняет изменения, а Ctrl+Enter создает перенос на новую строку.
+    Клик снаружи также сохраняет, а Esc отменяет.
+    Маркеры меняются при клике по ним, также для этого появляется всплывающая панелька слева.
+    Также спарва от задачи появляются кнопки удаления задачи и добавления новых (дочернего или соседнего элемента).
 </p>
 
 
@@ -44,6 +63,32 @@
     На стороне сервера пароль еще раз хешируется перед сохранением в файл или сравнением с сохраненным значением
     (стандартная защита на случай, если вдруг злоумышленник получит доступ к файлам паролей с сервера).
 </p>
+
+
+<br>
+<br>
+<style type="text/css">
+    table {  border-spacing: 0;  border-collapse: collapse;  }
+    table td  {  padding: 0 5px;  background-color: #F0F0F0;  border: 3px #FFFFFF solid;  }
+    table th  {  padding: 0 5px;  background-color: #E0E0E0;  border: 3px #FFFFFF solid;  }
+</style>
+<h4>Вариант реализации иконок используя unicode-шрифт</h4>
+<table>
+    <tr>  <th>ch</th>  <th>code</th>  <th>name</th>  </tr>
+    <tr>  <td>&minus;</td>  <td>&amp;#x2212;<br>(&amp;minus;)</td>  <td>MINUS</td>  </tr>
+    <tr>  <td>&#x26A0;</td>  <td>&amp;#x26A0;</td>  <td>WARNING SIGN</td>  </tr>
+    <tr>  <td>&#x2622;</td>  <td>&amp;#x2622;</td>  <td>RADIOACTIVE (FIRE не доступен со шрифтом дежавю)</td>  </tr>
+    <tr>  <td>&#x2713;</td>  <td>&amp;#x2713;</td>  <td>CHECK MARK</td>  </tr>
+    <tr>  <td>&#x2699;</td>  <td>&amp;#x2699;</td>  <td>GEAR</td>  </tr>
+    <tr>  <td>&#x2022;</td>  <td>&amp;#x2022;</td>  <td>BULLET</td>  </tr>
+    <tr>  <td>&#x2692;</td>  <td>&amp;#x2692;</td>  <td>HAMMER AND PICK</td>  </tr>
+    <tr>  <td>?</td>  <td>?</td>  <td>QUESTION</td>  </tr>
+    <tr>  <td>&#x2300;</td>  <td>&amp;#x2300;</td>  <td>DIAMETER SIGN</td>  </tr>
+    <tr>  <td>&#x2205;</td>  <td>&amp;#x2205;</td>  <td>нужный знак EMPTY SET &#x2205 смотрится хуже с DejaVu шрифтом</td>  </tr>
+    <tr>  <td>&#x263C;</td>  <td>&amp;#x263C;</td>  <td>WHITE SUN WITH RAYS</td>  </tr>
+    <tr>  <td>&#x2601;</td>  <td>&amp;#x2601;</td>  <td>CLOUDS</td>  </tr>
+    <tr>  <td>&#x2620;</td>  <td>&amp;#x2620;</td>  <td>SKULL AND CROSSBONES</td>  </tr>
+</table>
 
 
 </body>

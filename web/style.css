@@ -92,11 +92,20 @@ h1
 {
 }
 
+#plan > ul
+{
+    margin-left: 28px;
+}
+
 #plan li
 {
     padding: 4px 0px 0px;
 }
 
+#plan span
+{
+    display: inline-block;
+}
 #plan > span:hover,
 #plan li > span:hover
 {
@@ -115,7 +124,69 @@ h1
 {
     height: 400px;
     width: 100%;
+    text-decoration: none;
+    /*font-weight: inherit;*/
+    /*color: inherit;*/
 }
+
+#plan .mark
+{
+    cursor: pointer;
+}
+#plan .mark > .mark-panel
+{
+    display: none;
+    margin-left: -48px;
+    position: relative;
+    z-index: 1;
+    background-color: #FFFFFF;
+}
+#plan .mark:hover > .mark-panel
+{
+    display: inline-block;
+}
+#plan .mark > .mark-panel > .mark
+{
+    margin: 0;
+}
+#plan .mark:hover, #plan .mark:hover > .mark-panel
+{
+    box-shadow: 0 0 3px 1px rgba(64, 128, 255, 0.5);
+}
+#plan .mark > .mark-panel > .mark:hover
+{
+    position: relative;
+    z-index: 2;
+}
+
+#plan .button  {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    vertical-align: bottom;
+    margin-left: 4px;
+}
+#plan .button.remove  {
+    margin-left: 8px;
+}
+#plan .button  {
+    visibility: hidden;
+}
+#plan li:hover > .button  {
+    visibility: visible;
+}
+#plan > .button:only-child  {
+    visibility: visible;
+}
+#plan .button.append  {  background-position: 0 0;  }
+#plan .button.append:hover  {  background-position: 16px 0;  }
+#plan .button.insert  {  background-position: 0 -16px;  }
+#plan .button.insert:hover  {  background-position: 16px -16px;  }
+#plan .button.remove  {  background-position: 0 -32px;  }
+#plan .button.remove:hover  {  background-position: 16px -32px;  }
+#plan .button.edit  {  background-position: 0 -48px;  }
+#plan .button.edit:hover  {  background-position: 16px -48px;  }
 
 #childs
 {
@@ -140,9 +211,8 @@ h1
 .plannode-button
 {
     display: inline-block;
-    width: 16px;
-    height: 16px;
-    padding: 4px;
+    width: 24px;
+    height: 24px;
     cursor: pointer;
 }
 .plannode-button.delete  {  visibility: hidden;  }

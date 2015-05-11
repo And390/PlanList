@@ -196,7 +196,7 @@ function makeEditable(element, multiline, saveHandler, openHandler, closeHandler
             element.style.whiteSpace = savedWhiteSpace;
             element.style.display = savedDisplay;
             element.style.zIndex = savedZIndex;
-            removeElement(input);
+            removeNode(input);
         }
         //    поместить input за пределы видимости
         element.style.position = "absolute";

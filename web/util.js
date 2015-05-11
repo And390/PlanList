@@ -183,11 +183,30 @@ function getElement(element)  {
     return element;
 }
 
-function removeElement(child)  {
+function createNode(source)
+{
+    if (typeof source === "string")  return document.createTextNode(source);
+    if (source instanceof Node)  return source;
+    //    create element of specified tagName
+    if (!source.tagName)  throw "No tagName parameter for createNode()";
+    var element = document.createElement(source.tagName);
+    //    set properties
+    for (var i in source)  if (source.hasOwnProperty(i) && i!=='tagName' && i!=='childs')  element[i] = source[i];
+    //    recursively create childs
+    if (source.childs)  for (i=0; i<source.childs.length; i++)  element.appendChild(createNode(source.childs[i]));
+    return element;
+}
+
+function fillupNodes(element)
+{
+    for (var i=1; i<arguments.length; i++)  element.appendChild(createNode(arguments[i]));
+}
+
+function removeNode(child)  {
     child.parentNode.removeChild(child);
 }
 
-function replaceElement(oldChild, newChild)  {
+function replaceNode(oldChild, newChild)  {
     oldChild.parentNode.replaceChild(newChild, oldChild);
 }
 
@@ -197,6 +216,12 @@ function insertBefore(newChild, refChild)  {
 
 function insertAfter(newChild, refChild)  {
     refChild.parentNode.insertBefore(newChild, refChild.nextSibling);
+}
+
+function iterateNodes(element, handler)  {
+    if (handler(element))  return true;
+    for (var child=element.firstChild; child; child=child.nextSibling)  if (iterateNodes(child, handler))  return true;
+    return false;
 }
 
 //    from http://stackoverflow.com/questions/1700870/how-do-i-do-outerhtml-in-firefox
