@@ -36,14 +36,16 @@ public class PlanListService implements Filter
             servletContext = config.getServletContext();
             encoding = config.getInitParameter("encoding");
             if (encoding==null)  encoding = "UTF-8";
-            templateManager = new WatchFileTemplateManager(new File(config.getServletContext().getRealPath("")), encoding);
-
+            //  получить путь к каталогу веб-приложения и запустить на нем TemplateManager
+            String path = config.getServletContext().getRealPath("/");  //этот вариант вариант может не сработать в зависимости от сервера
+            if (path==null)  path = new File (this.getClass().getResource("/").getPath()+"../../").getCanonicalPath();  //тогда можно попробовать еще такой
+            templateManager = new WatchFileTemplateManager(new File(path), encoding);
             // настройка data, если начинается с '/', '.' или '..', то считается абсолютным путем или путем относительно папки запуска (томката)
             // иначе считается путем относительно корня каталога веб-приложения
             String data = config.getInitParameter("data");
             if (Util.isEmpty(data))  data = "data";
-            if (!data.startsWith(".") && !new File (data).isAbsolute())  data = servletContext.getRealPath("/"+data);
-            webDataDir = Util.subFilePath(servletContext.getRealPath("/"), data);
+            if (!data.startsWith(".") && !new File (data).isAbsolute())  data = path+"/"+data;
+            webDataDir = Util.subFilePath(path, data);
             dataAccess = new DataAccess (data);
         }
         catch (IOException e)  {  destroy();  throw new ServletException (e);  }

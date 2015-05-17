@@ -1,0 +1,2 @@
+It seems like Heroku ignores empty directories on deploy, so it needs this dummy file.
+Also Heroku allows to write only in ./tmp and ./log directories at application root.

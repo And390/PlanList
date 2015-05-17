@@ -14,6 +14,9 @@
             <element id="file-copy" path="$PROJECT_DIR$/../Java/lib/commons-io-2.2.jar" />
             <element id="file-copy" path="$PROJECT_DIR$/../Java/lib/commons-lang-2.4.jar" />
           </element>
+          <element id="directory" name="src">
+            <element id="dir-copy" path="$PROJECT_DIR$/src" />
+          </element>
         </element>
         <element id="file-copy" path="$PROJECT_DIR$/../../web/planlist/favicon.ico" />
         <element id="file-copy" path="$PROJECT_DIR$/../../web/locatejs/locate.js" />
