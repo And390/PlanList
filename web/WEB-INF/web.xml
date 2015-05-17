@@ -11,6 +11,10 @@
             <param-name>data</param-name>
             <param-value>./planlist_data</param-value>
         </init-param>
+        <init-param>
+            <param-name>watch</param-name>
+            <param-value>true</param-value>
+        </init-param>
     </filter>
 
     <filter-mapping>

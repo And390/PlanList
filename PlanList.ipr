@@ -24,7 +24,7 @@
     </artifact>
     <artifact type="war" name="planlist.war">
       <output-path>$PROJECT_DIR$/out/</output-path>
-      <root id="archive" name="PlanList.war">
+      <root id="archive" name="planlist.war">
         <element id="artifact" artifact-name="planlist" />
       </root>
     </artifact>

@@ -11,6 +11,10 @@
             <param-name>data</param-name>
             <param-value>/app/tmp/planlist_data</param-value>
         </init-param>
+        <init-param>
+            <param-name>watch</param-name>
+            <param-value>false</param-value>
+        </init-param>
     </filter>
 
     <filter-mapping>

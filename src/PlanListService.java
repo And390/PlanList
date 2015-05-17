@@ -1,3 +1,4 @@
+import template.ServletTemplateManager;
 import template.TemplateManager;
 import template.WatchFileTemplateManager;
 import utils.StringList;
@@ -25,7 +26,7 @@ public class PlanListService implements Filter
     private Logger logger = Logger.console;
     private ServletContext servletContext;
     private String encoding;
-    private WatchFileTemplateManager templateManager;
+    private TemplateManager templateManager;
     private DataAccess dataAccess;
     private String webDataDir;  // содержит путь к data относительно корня веб-приложения, если data внутри него
 
@@ -34,16 +35,16 @@ public class PlanListService implements Filter
     {
         try  {
             servletContext = config.getServletContext();
-            encoding = config.getInitParameter("encoding");
-            if (encoding==null)  encoding = "UTF-8";
+            encoding = get(config, "encoding", "UTF-8");
+            boolean watch = getBool(config, "watch", true);
             //  получить путь к каталогу веб-приложения и запустить на нем TemplateManager
             String path = config.getServletContext().getRealPath("/");  //этот вариант вариант может не сработать в зависимости от сервера
             if (path==null)  path = new File (this.getClass().getResource("/").getPath()+"../../").getCanonicalPath();  //тогда можно попробовать еще такой
-            templateManager = new WatchFileTemplateManager(new File(path), encoding);
+            templateManager = watch ? new WatchFileTemplateManager(new File(path), encoding) :
+                    new ServletTemplateManager(servletContext, encoding);
             // настройка data, если начинается с '/', '.' или '..', то считается абсолютным путем или путем относительно папки запуска (томката)
             // иначе считается путем относительно корня каталога веб-приложения
-            String data = config.getInitParameter("data");
-            if (Util.isEmpty(data))  data = "data";
+            String data = get(config, "data", "data");
             if (!data.startsWith(".") && !new File (data).isAbsolute())  data = path+"/"+data;
             webDataDir = Util.subFilePath(path, data);
             dataAccess = new DataAccess (data);
@@ -51,14 +52,28 @@ public class PlanListService implements Filter
         catch (IOException e)  {  destroy();  throw new ServletException (e);  }
     }
 
+    private static boolean getBool(FilterConfig config, String name, boolean defaultValue)  {
+        String value = config.getInitParameter(name);
+        if (value==null || "".equals(value))  return defaultValue;
+        else if ("true".equals(value) || "on".equals(value) || "yes".equals(value))  return true;
+        else if ("false".equals(value) || "off".equals(value) || "no".equals(value))  return false;
+        else  throw new RuntimeException ("Illegal '"+name+"' parameter value: "+value);
+    }
+
+    private static String get(FilterConfig config, String name, String defaultValue)  {
+        String value = config.getInitParameter(name);
+        return value==null || "".equals(value) ? defaultValue : value;
+    }
+
     @Override
     public void destroy()
     {
         try  {
-            if (templateManager!=null)  templateManager.close();
+            if (templateManager!=null && templateManager instanceof AutoCloseable)  ((AutoCloseable)templateManager).close();
             TemplateManager.free();
         }
-        catch (IOException|InterruptedException e)  {  throw new RuntimeException (e);  }
+        catch (RuntimeException e)  {  throw e;  }
+        catch (Exception e)  {  throw new RuntimeException (e);  }
     }
 
     @Override

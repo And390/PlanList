@@ -1,0 +1,5 @@
+before build-war.sh use:
+heroku buildpacks:set http://github.com/ryandotsmith/null-buildpack.git --app planlist
+
+before build-src.sh use:
+heroku buildpacks:clear --app planlist

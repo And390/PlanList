@@ -11,7 +11,7 @@ cp -r ../Utils/src out/heroku
 cp -r src/ out/heroku
 cp -r web out/heroku
 cp -r heroku out
-rm out/heroku/build.sh
+rm out/heroku/build*.sh
 
 # copy it to Dropbox
 rm -r /work/Dropbox/Apps/Heroku/planlist
