@@ -1,6 +1,12 @@
+package planlist;
+
+import planlist.data.DataAccess;
+import planlist.data.FileDataAccess;
+import planlist.data.MongoDBDataAccess;
 import template.ServletTemplateManager;
 import template.TemplateManager;
 import template.WatchFileTemplateManager;
+import utils.ConfigException;
 import utils.StringList;
 import utils.Util;
 import utils.log.Logger;
@@ -13,6 +19,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 /**
  * And390 - 09.03.15.
@@ -24,45 +32,53 @@ public class PlanListService implements Filter
     public static String AJAX_ENCODING = "UTF-8";
 
     private Logger logger = Logger.console;
-    private ServletContext servletContext;
     private String encoding;
     private TemplateManager templateManager;
     private DataAccess dataAccess;
-    private String webDataDir;  // содержит путь к data относительно корня веб-приложения, если data внутри него
+    private String storageDir;  // содержит путь к storage относительно корня веб-приложения, если data внутри него
 
     @Override
     public void init(FilterConfig config) throws ServletException
     {
         try  {
-            servletContext = config.getServletContext();
-            encoding = get(config, "encoding", "UTF-8");
-            boolean watch = getBool(config, "watch", true);
-            //  получить путь к каталогу веб-приложения и запустить на нем TemplateManager
-            String path = config.getServletContext().getRealPath("/");  //этот вариант вариант может не сработать в зависимости от сервера
-            if (path==null)  path = new File (this.getClass().getResource("/").getPath()+"../../").getCanonicalPath();  //тогда можно попробовать еще такой
+            ServletContext servletContext = config.getServletContext();
+            //    read properties
+            InputStream input = servletContext.getResourceAsStream("/WEB-INF/config.properties");
+            if (input==null)  throw new ConfigException ("No 'WEB-INF/config.properties' file");
+            Properties properties = Util.readProperties(input, "UTF-8");
+            encoding = Util.get(properties, "encoding", "UTF-8");
+            boolean watch = Util.getBool(properties, "watch", true);
+            //    получить путь к каталогу веб-приложения и запустить на нем TemplateManager
+            String path = servletContext.getRealPath("/");  //этот вариант вариант может не сработать в зависимости от сервера
+            if (path==null)  path = new File (servletContext.getResource("/").getPath()).getCanonicalPath();  //тогда можно попробовать еще такой
+            //if (path==null)  path = new File (this.getClass().getResource("/").getPath()+"../../").getCanonicalPath();  //тогда можно попробовать еще такой
             templateManager = watch ? new WatchFileTemplateManager(new File(path), encoding) :
                     new ServletTemplateManager(servletContext, encoding);
-            // настройка data, если начинается с '/', '.' или '..', то считается абсолютным путем или путем относительно папки запуска (томката)
-            // иначе считается путем относительно корня каталога веб-приложения
-            String data = get(config, "data", "data");
-            if (!data.startsWith(".") && !new File (data).isAbsolute())  data = path+"/"+data;
-            webDataDir = Util.subFilePath(path, data);
-            dataAccess = new DataAccess (data);
+            //    storage
+            String filesStorageDir = Util.get(properties, "storage.files.dir", null);
+            String mongodbURL = Util.get(properties, "storage.mongodb.url", null);
+            if (filesStorageDir==null && mongodbURL==null)
+                throw new ConfigException ("You must specify one of storage config properties: 'storage.files.dir' or 'storage.mongodb.url'");
+            if (filesStorageDir!=null && mongodbURL!=null)
+                throw new ConfigException ("You can specify only one of storage config properties: 'storage.files.dir' or 'storage.mongodb.url'");
+            if (mongodbURL!=null)  {
+                //  mongo data storage
+                dataAccess = new MongoDBDataAccess (mongodbURL);
+            }
+            else  {
+                //  file storage, если начинается с '/', '.' или '..', то считается абсолютным путем или путем относительно папки запуска (томката)
+                //  иначе считается путем относительно корня каталога веб-приложения
+                String data = Util.get(properties, "storage.files.dir", "data");
+                if (!data.startsWith(".") && !new File (data).isAbsolute())  data = path+"/"+data;
+                storageDir = Util.subFilePath(path, data);
+                dataAccess = new FileDataAccess(data);
+            }
         }
-        catch (IOException e)  {  destroy();  throw new ServletException (e);  }
-    }
-
-    private static boolean getBool(FilterConfig config, String name, boolean defaultValue)  {
-        String value = config.getInitParameter(name);
-        if (value==null || "".equals(value))  return defaultValue;
-        else if ("true".equals(value) || "on".equals(value) || "yes".equals(value))  return true;
-        else if ("false".equals(value) || "off".equals(value) || "no".equals(value))  return false;
-        else  throw new RuntimeException ("Illegal '"+name+"' parameter value: "+value);
-    }
-
-    private static String get(FilterConfig config, String name, String defaultValue)  {
-        String value = config.getInitParameter(name);
-        return value==null || "".equals(value) ? defaultValue : value;
+        catch (Exception e)  {
+            destroy();
+            throw //e instanceof ServletException ? (ServletException)e :
+                  e instanceof ConfigException ? new ServletException (e.getMessage()) : new ServletException(e);
+        }
     }
 
     @Override
@@ -71,6 +87,7 @@ public class PlanListService implements Filter
         try  {
             if (templateManager!=null && templateManager instanceof AutoCloseable)  ((AutoCloseable)templateManager).close();
             TemplateManager.free();
+            if (dataAccess!=null)  dataAccess.close();
         }
         catch (RuntimeException e)  {  throw e;  }
         catch (Exception e)  {  throw new RuntimeException (e);  }
@@ -99,8 +116,8 @@ public class PlanListService implements Filter
         if (path.equals("/"))  path = "";
         else if (!path.startsWith("/"))  path = '/'+path;  // в таком виде уже должен возвращаться сервером
 
-        //    не-html файлы не из каталога data с непустым расширением отдаются по умолчанию
-        if (!path.equals("") && !(webDataDir!=null && Util.startsWithPath(path, webDataDir))
+        //    не-html файлы с непустым расширением отдаются по умолчанию, из каталога storage отдавать нельзя
+        if (!path.equals("") && !(storageDir !=null && Util.startsWithPath(path, storageDir))
                 && path.indexOf('.')!=-1 && !path.endsWith(".html"))  {
             return false;
         }
@@ -167,14 +184,14 @@ public class PlanListService implements Filter
                 {
                     String planContent = getPost(request);
                     //    сохранить
-                    if (!dataAccess.savePlanContent(user, path, planContent))  throw new ClientException ("Plan does not exists", true, 404);
+                    dataAccess.savePlanContent(user, path, planContent);
                 }
                 //    добавить план
                 else if (action.equals("addplan"))
                 {
                     String name = getNotEmpty(request, "name", false);
                     String title = getNotEmpty(request, "title", false);
-                    dataAccess.addPlan(user, path, name, title, "");
+                    dataAccess.addPlan(user, path, name, title);
                 }
                 //    удалить план
                 else if (action.equals("deleteplan"))
@@ -221,12 +238,13 @@ public class PlanListService implements Filter
         else try
         {
             //    redirect, при неправильных path
-            String truePath = Util.cutIfEnds(path, "/").toLowerCase();
-            if (!path.equals(truePath))  {
+            String lowerCasePath = path.toLowerCase();
+            if (!path.equals(lowerCasePath))  {
                 response.setStatus(301);
-                response.setHeader("Location", context+truePath);
+                response.setHeader("Location", context+lowerCasePath);
                 return true;
             }
+            path = Util.cutIfEnds(path, "/");  // со слэшем на конце тоже можно было бы редиректить, но так томкат может бесконечные редиректы создавать, если его дополнительно не настраивать
             //    страница пользователя
             if (user!=null)
             {
@@ -238,11 +256,11 @@ public class PlanListService implements Filter
                     response.setStatus(404);
                     throw new ClientException ("Wrong link to resource "+path, true);
                 }
-                //    прочитать мета-информацию о выбранном плане и его непосредственных детях, если он не имеет родителя,
-                //    если имеет, то нужна еще информация о его родителе
+                //    прочитать мета-информацию о выбранном плане и его непосредственных детях,
+                //    если он имеет родителя, то нужна еще информация о его родителе
                 String loadPlanPath = path.substring(user.name.length()+1);
                 int p = loadPlanPath.lastIndexOf('/');
-                PlanNode plan = dataAccess.loadPlans(user.name, p!=-1 ? loadPlanPath.substring(0, p) : loadPlanPath, p!=-1 ? 2 : 1);
+                PlanNode plan = dataAccess.loadPlans(user, p!=-1 ? path.substring(0, path.lastIndexOf('/')) : path, p!=-1 ? 2 : 1);
                 if (p!=-1)  {  parent = plan;  plan = plan.getChild(loadPlanPath.substring(p + 1));  }
                 planHeader = plan.title;  //loadPlans может вернуть null в случае битого конфига, тогда получим NullPointerException
                 if (plan.childs!=null)  childs = plan.childs.toArray(new PlanNode [plan.childs.size()]);
@@ -278,19 +296,13 @@ public class PlanListService implements Filter
         return true;
     }
 
-    public static class User
-    {
-        public String name;
-    }
-
-
 
     //    util
 
-    public static String getIfExists(HttpServletRequest request, String name) throws ClientException
-    {
-        return request.getParameter(name);
-    }
+//    public static String getIfExists(HttpServletRequest request, String name) throws ClientException
+//    {
+//        return request.getParameter(name);
+//    }
 
     public static String get(HttpServletRequest request, String name) throws ClientException
     {

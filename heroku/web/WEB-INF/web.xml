@@ -6,7 +6,7 @@
 
     <filter>
         <filter-name>PlanList</filter-name>
-        <filter-class>PlanListService</filter-class>
+        <filter-class>planlist.PlanListService</filter-class>
         <init-param>
             <param-name>data</param-name>
             <param-value>/app/tmp/planlist_data</param-value>

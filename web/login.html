@@ -43,7 +43,7 @@
     {
         var username = (form.elements["register"] ? form.elements["register"] : form.elements["login"]).value;
         var password = form.elements["password"].value;
-        password = CryptoJS.PBKDF2(password, "#"+username+"-salt!", { keySize: 128/32, iterations: 100 });
+        password = CryptoJS.PBKDF2(password, "#"+username.toLowerCase()+"-salt!", { keySize: 128/32, iterations: 100 });
         form.elements["password"].value = password;
         return true;
     }

@@ -1,38 +1,39 @@
+package planlist.data;
+
+import planlist.PlanNode;
+import planlist.User;
+import planlist.UserException;
 import utils.ByteArray;
 import utils.RuntimeAppendable;
 import utils.StringList;
 import utils.Util;
 import utils.objects.Consumer;
 
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
- * And390 - 18.03.15.
  * Здесь все функции по получению и работе с данными (модель).
  * Также, все проверки ввода пользователя, типа неправильных символов.
  * Имена пользователей и планов здесь приводятся к нижнему регистру (остальная часть программы к ним регистронечувствительна)
  * Все пути уже должны передаваться в нижнем регистре (вообще, вместе с именами это както не очень логично получается).
+ * And390 - 18.03.15.
  */
 @SuppressWarnings("unused")
-public class DataAccess
+public class FileDataAccess extends DataAccess
 {
     public static final String PLAN_ENCODING = "UTF-8";
 
 
     private final String path;  // with ending slash
 
-    public DataAccess(String path_) throws IOException  {
+    public FileDataAccess(String path_) throws IOException  {
         if (!new File (path_).isDirectory())  throw new FileNotFoundException ("Directory does not exists: "+path_);
         if (!path_.endsWith("/"))  path_=path_+"/";  path=path_;
     }
-
 
 
     //        ----    common    ----
@@ -43,8 +44,31 @@ public class DataAccess
 
     //        ----    функции работы с планами    ----
 
+    private static final String PLANS_FILENAME = "plans";
+    private static final String PASSWORD_FILENAME = "password";
+    private static final String PLAN_FILE_SUFFIX = ".txt";
+    private static final String PLAN_DIR_SUFFIX = ".d";
+    private static final String ROOT_PLAN_FILENAME = PLAN_FILE_SUFFIX;
+
+    private static String getPlanDirName(String planName) {
+        return planName+PLAN_DIR_SUFFIX;
+    }
+
+    private static String getPlanFileName(String planName) {
+        return planName+PLAN_FILE_SUFFIX;
+    }
+
+    private static String getPlanDirPath(String path) {
+        if (path.equals(""))  return path;
+        return path.substring(0, 1)+path.substring(1).replace("/", PLAN_DIR_SUFFIX+"/")+PLAN_DIR_SUFFIX;
+    }
+
+    private static String getPlanFilePath(String path) {
+        return path.substring(0, 1)+path.substring(1).replace("/", PLAN_DIR_SUFFIX+"/")+PLAN_FILE_SUFFIX;
+    }
+
     // делает все проверки и добавляет план
-    public void addPlan(PlanListService.User user, String parentFullPath, String name_, String title_, String content) throws UserException, IOException
+    public void addPlan(User user, String parentFullPath, String name_, String title_) throws UserException, IOException
     {
         //    проверки
         final String name = checkPlanName(name_);
@@ -71,13 +95,13 @@ public class DataAccess
             }
         });
         //    записать .txt файл, создав каталог, если надо
-        File contentDir = new File (userDir, parentPath);
+        File contentDir = new File (userDir, getPlanDirPath(parentPath));
         if (!contentDir.exists())  Util.mkdir(contentDir);
-        Util.write(new File (contentDir, name+".txt"), content, PLAN_ENCODING);
+        Util.write(new File (contentDir, getPlanFileName(name)), DEFAULT_PLAN_CONTENT, PLAN_ENCODING);
     }
 
     // делает все проверки и удаляет план
-    public void deletePlan(PlanListService.User user, String fullPath) throws UserException, IOException
+    public void deletePlan(User user, String fullPath) throws UserException, IOException
     {
         //    проверки
         if (fullPath.indexOf('/', 1)==-1)  throw new UserException ("It is not possible to delete root plan");
@@ -97,13 +121,14 @@ public class DataAccess
             }
         });
         //    удалить .txt файл и каталог, если существует
-        Util.delete(new File (userDir, planPath+".txt"));
-        new File (userDir, planPath).delete();
+        Util.delete(new File (userDir, getPlanFilePath(planPath)));
+        File planDir = new File (userDir, getPlanDirPath(planPath));
+        if (planDir.exists())  Util.delete(planDir);
     }
 
     // делает все проверки и изменяет имя и заголовок плана
     // если новое имя = null, то остается старое
-    public void editPlan(PlanListService.User user, String fullPath, String name_, String title_) throws UserException, IOException
+    public void editPlan(User user, String fullPath, String name_, String title_) throws UserException, IOException
     {
         //    проверки
         int l = fullPath.lastIndexOf('/');       //указатель на последний слэш
@@ -133,9 +158,9 @@ public class DataAccess
         });
         //    переименовать .txt и каталог
         if (newPlanPath!=null)  {
-            Util.renameTo(new File (userDir, oldPlanPath+".txt"), new File (userDir, newPlanPath+".txt"));
-            File oldPanDir = new File (userDir, oldPlanPath);
-            if (oldPanDir.exists())  Util.renameTo(oldPanDir, new File (userDir, newPlanPath));
+            Util.renameTo(new File (userDir, getPlanFilePath(oldPlanPath)), new File (userDir, getPlanFilePath(newPlanPath)));
+            File oldPanDir = new File (userDir, getPlanDirPath(oldPlanPath));
+            if (oldPanDir.exists())  Util.renameTo(oldPanDir, new File (userDir, getPlanDirPath(newPlanPath)));
         }
     }
 
@@ -143,13 +168,13 @@ public class DataAccess
     private static void processPlans(File userDir, String planPath, PlansProcessor processor) throws UserException, IOException
     {
         //    прочитать plans файл
-        File plansFile = new File (userDir, "plans");
+        File plansFile = new File (userDir, PLANS_FILENAME);
         String plansContent = Util.read(plansFile, PLAN_ENCODING);
         //    разобрать, формируя результат
         final StringList output = new StringList ();
         processor.output = output;
         parsePlans(plansContent, processor);
-        if (!processor.find)  throw new UserException ("Plan is not found: "+planPath, 404);
+        if (!processor.find)  throw new UserException ("Plan is not found: "+planPath, UserException.NOT_FOUND);
         //    записать plans файл
         Util.write(plansFile, output.toString(), PLAN_ENCODING);
     }
@@ -172,52 +197,32 @@ public class DataAccess
         }
     }
 
-    public String loadPlanContent(PlanListService.User user, String planPath) throws IOException, UserException
+    public String loadPlanContent(User user, String planPath) throws IOException, UserException
     {
         checkPlanOwner(user, planPath);
         return loadPlanContent(planPath);
     }
     private String loadPlanContent(String planPath) throws IOException
     {
-        String fullPath = path.substring(0, path.length()-1) + planPath + (planPath.indexOf('/', 1)==-1 ? "/.txt" : ".txt");
-        try  {  return Util.read(fullPath, PLAN_ENCODING);  }
+        int i = planPath.indexOf('/', 1);
+        File userDir = getUserDir(planPath.substring(1, i==-1 ? planPath.length() : i));
+        File planFile = new File (userDir, i==-1 ? ROOT_PLAN_FILENAME : getPlanFilePath(planPath.substring(i)));
+        try  {  return Util.read(planFile, PLAN_ENCODING);  }
         catch (FileNotFoundException e)  {  return null;  }
     }
 
-    public boolean savePlanContent(PlanListService.User user, String planPath, String content) throws IOException, UserException
+    public void savePlanContent(User user, String planPath, String content) throws IOException, UserException
     {
         checkPlanOwner(user, planPath);
-        return savePlanContent(planPath, content);
+        savePlanContent(planPath, content);
     }
-    private boolean savePlanContent(String planPath, String content) throws IOException
+    private void savePlanContent(String planPath, String content) throws IOException, UserException
     {
-        String fullPath = path.substring(0, path.length()-1) + planPath + (planPath.indexOf('/', 1)==-1 ? "/.txt" : ".txt");
-        try  {  Util.write(fullPath, content, PLAN_ENCODING);  return true;  }
-        catch (FileNotFoundException e)  {  return false;  }
-    }
-
-    private static String checkPlanName(String name) throws UserException
-    {
-        if (name.equals(""))  throw new UserException ("Empty plan name");
-        if (name.length()>=256)  throw new UserException("Plan name must be less than 256 characters in length");
-        for (char c : name.toCharArray())  if (!Character.isLetterOrDigit(c) && c!='.' && c!='-' && c!='_')
-            throw new UserException("Plan name must contains only letters, digits, '.', '-' or '_'");
-        return name.toLowerCase();
-    }
-
-    private static String checkPlanTitle(String title) throws UserException
-    {
-        for (char c : title.toCharArray())  if (c=='\t' || c=='\n' || c=='\r')
-            throw new UserException("Plan title must not contain tab and line breaks");
-        return title;
-    }
-
-    // TODO плохо, что в DataAccess коды http
-    private void checkPlanOwner(PlanListService.User user, String planPath) throws UserException
-    {
-        if (user==null)  throw new UserException ("not logged in", 403);
-        String planUser = planPath.substring(1, Util.indexOf(planPath, '/', 1));
-        if (!planUser.equals(user.name))  throw new UserException ("You have no access to other user's plans", 403);
+        int i = planPath.indexOf('/', 1);
+        File userDir = getUserDir(planPath.substring(1, i==-1 ? planPath.length() : i));
+        File planFile = new File (userDir, i==-1 ? ROOT_PLAN_FILENAME : getPlanFilePath(planPath.substring(i)));
+        try  {  Util.write(planFile, content, PLAN_ENCODING);  }
+        catch (FileNotFoundException e)  {  throw new UserException ("Plan is not found: "+path, UserException.NOT_FOUND);  }
     }
 
     private static void parsePlans(String plansContent, PlansParser parser) throws IOException, UserException
@@ -241,22 +246,22 @@ public class DataAccess
             for (; i<row.length() && row.charAt(i)==' '; i++)  level++;
             //
             String[] values = Util.slice(row.substring(i), '\t');
-            if (values.length!=2)  throw new RuntimeException ("Wrong 'plans' file, line "+line+" has "+(values.length==1 ? "no" : "too much")+" tab characters");
+            if (values.length!=2)  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, line "+line+" has "+(values.length==1 ? "no" : "too much")+" tab characters");
             //    проверки корневой записи
             if (line==1)  {
-                if (level!=0)  throw new RuntimeException ("Wrong 'plans' file, first line must be root (non-indented)");
-                if (!values[0].equals(""))  throw new RuntimeException ("Wrong 'plans' file, first line (root) must have empty name");
+                if (level!=0)  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, first line must be root (non-indented)");
+                if (!values[0].equals(""))  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, first line (root) must have empty name");
             }
             else  {
-                if (level==0)  throw new RuntimeException ("Wrong 'plans' file, root node (non-indented) on line "+line);
-                if (values[0].equals(""))  throw new RuntimeException ("Wrong 'plans' file, line "+line+" has empty name");
+                if (level==0)  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, root node (non-indented) on line "+line);
+                if (values[0].equals(""))  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, line "+line+" has empty name");
             }
             //    разобрать уровень вложенности
             int prevLevel = pathBuffer.size() / 2;
             if (level<prevLevel)  {  pathBuffer.setSize(level * 2);  }
             if (level<=prevLevel)  {  if (level!=0)  pathBuffer.set(pathBuffer.size()-1, values[0]);  }
             else if (level==prevLevel+1)  {  pathBuffer.append("/").append(values[0]);  }
-            else  throw new RuntimeException ("Wrong 'plans' file, too much white spaces at start on line "+line+", previous level "+prevLevel+", found "+level);
+            else  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, too much white spaces at start on line "+line+", previous level "+prevLevel+", found "+level);
             //    обработать
             process(pathBuffer.toString(), level, values[0], values[1]);
         }
@@ -268,7 +273,7 @@ public class DataAccess
     private void savePlans(String username, PlanNode root) throws IOException
     {
         String content = writePlans(root);
-        Util.write(new File (getUserDir(username), "plans"), content, PLAN_ENCODING);
+        Util.write(new File (getUserDir(username), PLANS_FILENAME), content, PLAN_ENCODING);
     }
     private static String writePlans(PlanNode root) throws IOException
     {
@@ -285,16 +290,11 @@ public class DataAccess
     // # блин, какой-то усложненный на ровном месте алгоритм получился, я таких не пишу обычно :)
     // загружает информацию о плане по указанному пути и рекурсивно о всех его детях, не больше глубины рекурсии depth
     // для глубины рекурсии 0 загружается только план по указанному пути, 1 - плюс все его непосредственные дети, и т.д.
-    public PlanNode loadPlans(String planPath, int depth) throws IOException
+    public PlanNode loadPlans(User user, String path, int depth) throws IOException, UserException
     {
-        if (!planPath.startsWith("/"))  throw new IllegalArgumentException ("planPath must starts with '/'");
-        int i = Util.indexOf(planPath, '/', 1);
-        return loadPlans(planPath.substring(0, i), planPath.substring(i), depth);
-    }
-    // корневой план имеет путь "", дочерний корневого - "/child", его дочерний - "/child/sub"
-    public PlanNode loadPlans(String username, String path, int depth) throws IOException
-    {
-        String content = Util.read(new File (getUserDir(username), "plans"), PLAN_ENCODING);
+        checkPlanOwner(user, path);
+        path = path.substring(1, path.indexOf('/', 1));
+        String content = Util.read(new File (getUserDir(user.name), PLANS_FILENAME), PLAN_ENCODING);
         content = Util.cutLastNL(content);
         return parsePlans(content, new int[]{0}, new int[]{1}, 0, path, depth);
     }
@@ -317,9 +317,9 @@ public class DataAccess
             //    разобрать текущую строку (после пробелов)
             int i2 = Util.indexOf(content, '\n', i1);
             String[] values = Util.slice(content.substring(i1, i2), '\t');
-            if (values.length!=2)  throw new RuntimeException ("Wrong 'plans' file, line "+row[0]+" has "+(values.length==1 ? "no" : "too much")+" tab characters");
-            if (pos[0]==0 && !values[0].equals(""))  throw new RuntimeException ("Wrong 'plans' file, root record must have empty name");
-            if (pos[0]!=0 && values[0].equals(""))  throw new RuntimeException ("Wrong 'plans' file, line "+row[0]+" has empty name");
+            if (values.length!=2)  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, line "+row[0]+" has "+(values.length==1 ? "no" : "too much")+" tab characters");
+            if (pos[0]==0 && !values[0].equals(""))  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, root record must have empty name");
+            if (pos[0]!=0 && values[0].equals(""))  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, line "+row[0]+" has empty name");
             //    переход к следующей строке
             pos[0] = i2 + 1;
             row[0]++;
@@ -363,7 +363,7 @@ public class DataAccess
             }
         }
         //    уровень больше - ошибка
-        else if (lev>level)  throw new RuntimeException ("Wrong 'plans' file, too much white spaces at start on line "+row[0]+", level="+level+", but found "+lev);
+        else if (lev>level)  throw new RuntimeException ("Wrong '"+PLANS_FILENAME+"' file, too much white spaces at start on line "+row[0]+", level="+level+", but found "+lev);
         //    уровень меньше - выход
         else  return null;
     }
@@ -400,14 +400,14 @@ public class DataAccess
             test(content, "", expected);
         }
         public static void main(String[] args) throws Exception  {
-            test("", "Wrong 'plans' file, line 1 has no tab characters");
+            test("", "Wrong '"+PLANS_FILENAME+"' file, line 1 has no tab characters");
             test("\t", new PlanNode ("", ""));
             test("\tRoot title", new PlanNode ("", "Root title"));
-            test("\tRoot title\t", "Wrong 'plans' file, line 1 has too much tab characters");
+            test("\tRoot title\t", "Wrong '"+PLANS_FILENAME+"' file, line 1 has too much tab characters");
             test("\tRoot\n", new PlanNode ("", "Root"));
-            test("\tRoot\n ", "Wrong 'plans' file, line 2 has no tab characters");
-            test("\tRoot\n xxx", "Wrong 'plans' file, line 2 has no tab characters");
-            test("\tRoot\n  ", "Wrong 'plans' file, too much white spaces at start on line 2, level=1, but found 2");
+            test("\tRoot\n ", "Wrong '"+PLANS_FILENAME+"' file, line 2 has no tab characters");
+            test("\tRoot\n xxx", "Wrong '"+PLANS_FILENAME+"' file, line 2 has no tab characters");
+            test("\tRoot\n  ", "Wrong '"+PLANS_FILENAME+"' file, too much white spaces at start on line 2, level=1, but found 2");
             test("\tRoot\n plan1\t", new PlanNode ("", "Root", new PlanNode ("plan1", "")));
             test("\tRoot\n plan1\tPlan 1\n plan2\tPlan 2\n", new PlanNode ("", "Root",
                     new PlanNode ("plan1", "Plan 1"),
@@ -425,7 +425,7 @@ public class DataAccess
                         new PlanNode ("plan2.2", "Plan 2.2"))
             ));
             test("\tRoot\n plan1\tPlan 1\n plan2\tPlan 2\n  plan2.1\tPlan 2.1\n    ",
-                    "Wrong 'plans' file, too much white spaces at start on line 5, level=3, but found 4");
+                    "Wrong '"+PLANS_FILENAME+"' file, too much white spaces at start on line 5, level=3, but found 4");
             // test path
             test("\tRoot\n plan1\tPlan 1\n plan2\tPlan 2\n  plan2.1\tPlan 2.1\n   plan2.1.1\tPlan 2.1.1\n   plan2.1.2\tPlan 2.1.2\n plan3\tPlan 3",
                     "/plan2",
@@ -472,7 +472,7 @@ public class DataAccess
     public void login(String username, String password) throws UserException, IOException
     {
         username = username.toLowerCase();
-        File passwordFile = getUserFile(username, "password");
+        File passwordFile = getUserFile(username, PASSWORD_FILENAME);
         login(username, password, passwordFile);
     }
     private void login(String username, String password, File passwordFile) throws UserException, IOException
@@ -482,7 +482,7 @@ public class DataAccess
         //    прочитать пароль из файла
         byte[] expect = ByteArray.read(passwordFile);
         //    посчитать хеш принятого пароля и проверить
-        byte[] hash = DataAccess.passwordServerHash(username, password);
+        byte[] hash = FileDataAccess.passwordServerHash(username, password);
         if (!Arrays.equals(hash, expect))  throw new UserException("Wrong username or password");
     }
 
@@ -491,35 +491,20 @@ public class DataAccess
     {
         username = username.toLowerCase();
         //    проверить новое имя
-        File userDir = checkUsername(username);
+        File userDir = checkUsernameFile(username);
         //    создать каталог пользователя
         Util.mkdir(userDir);
         //    посчитать хеш пароля, и записать в файл
-        savePassword(username, password, new File (userDir, "password"));
+        savePassword(username, password, new File (userDir, PASSWORD_FILENAME));
         //    создать корневой план
-        Util.write(new File (userDir, ".txt"),
-                "Use Edit button, Ctrl+E, Ctrl+Enter or click on empty space on the sides of this text to edit full plan\n" +
-                "Use Save button, Ctrl+S, Ctrl+Enter or click on empty space on the sides of this text to save edition and return view\n" +
-                "Use Cancel button or Esc to cancel changes\n" +
-                "You can edit single records by clicking on them\n" +
-                "You can change marker by clicking on them\n" +
-                " - This is a plan example\n" +
-                "   - try to modify it\n" +
-                "   * look at another markers\n" +
-                "   - remove it and write your own\n" +
-                "\n" +
-                "It is possible to hierarchically create child plan pages\n" +
-                "The following buttons (only one 'Add' for now) are used for this", PLAN_ENCODING);
-        Util.write(new File (userDir, "plans"), "\tMy plans", PLAN_ENCODING);
+        Util.write(new File (userDir, ROOT_PLAN_FILENAME), FIRST_PLAN_CONTENT, PLAN_ENCODING);
+        Util.write(new File (userDir, PLANS_FILENAME), "\t"+FIRST_PLAN_TITLE, PLAN_ENCODING);
     }
 
     // Проверяет, можно ли использовать имя пользователя. Возвращает каталог для нового пользователя (не созданный)
-    private File checkUsername(String username) throws UserException, IOException
+    protected File checkUsernameFile(String username) throws UserException, IOException
     {
-        if (username.equals(""))  throw new UserException ("Empty username");
-        if (username.length()>=256)  throw new UserException("Username must be less than 256 characters in length");
-        for (char c : username.toCharArray())  if (!Character.isLetterOrDigit(c) && c!=' ' && c!='.' && c!='-' && c!='_')
-            throw new UserException("Username must contains only letters, digits, ' ', '.', '-' or '_'");
+        super.checkUsername(username);
         File userDir = getUserDir(username);
         if (userDir.exists())  throw new UserException("Username is already taken");
         return userDir;
@@ -531,10 +516,10 @@ public class DataAccess
         username = username.toLowerCase();
         //    проверить пользователя и старый пароль
         File userDir = getUserDir(username);
-        File passwordFile = new File (userDir, "password");
+        File passwordFile = new File (userDir, PASSWORD_FILENAME);
         login(username, oldpswd, passwordFile);
         //    посчитать хеш пароля и сохранить в файл новый пароль
-        savePassword(username, newpswd, new File (userDir, "password"));
+        savePassword(username, newpswd, new File (userDir, PASSWORD_FILENAME));
     }
 
     // Меняет имя пользователя
@@ -544,13 +529,13 @@ public class DataAccess
         newname = newname.toLowerCase();
         //    проверить существование старого пользователя и его пароль
         File oldUserDir = getUserDir(oldname);
-        login(oldname, password, new File (oldUserDir, "password"));
+        login(oldname, password, new File (oldUserDir, PASSWORD_FILENAME));
         //    проверить новое имя
-        File newUserDir = checkUsername(newname);
+        File newUserDir = checkUsernameFile(newname);
         //    переименовать каталог
         Util.renameTo(oldUserDir, newUserDir);
         //    посчитать хеш пароля, и записать в файл
-        savePassword(newname, password, new File (newUserDir, "password"));
+        savePassword(newname, password, new File (newUserDir, PASSWORD_FILENAME));
     }
 
     // Удаляет пользователя
@@ -559,70 +544,13 @@ public class DataAccess
         username = username.toLowerCase();
         File userDir = getUserDir(username);
         //    проверить существование старого пользователя и его пароль
-        login(username, password, new File (userDir, "password"));
+        login(username, password, new File (userDir, PASSWORD_FILENAME));
         //    удалить каталог
         Util.delete(userDir);
     }
 
     private void savePassword(String username, String password, File passwordFile) throws IOException  {
-        byte[] hash = DataAccess.passwordServerHash(username, password);
+        byte[] hash = passwordServerHash(username, password);
         ByteArray.write(passwordFile, hash);
-    }
-
-
-    //        ----    вспомогательные функции хеширования паролей    ----
-
-    private static String cryptEncoding = "UTF-8";
-
-    public static String passwordClientHash(String username, String password)
-    {
-        try  {
-            byte[] result = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(new PBEKeySpec(
-                    password.toCharArray(), ("#"+username+"-salt!").getBytes(cryptEncoding), 100, 128)).getEncoded();
-            return toHex(result);
-        }
-        catch (RuntimeException e)  {  throw e;  }
-        catch (Exception e)  {  throw new RuntimeException (e);  }
-    }
-
-    public static byte[] passwordServerHash(String username, String password)
-    {
-        try  {
-            byte[] result = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(new PBEKeySpec(
-                    password.toCharArray(), ("#"+username+"-server-salt!").getBytes(cryptEncoding), 200, 128)).getEncoded();
-            return result;  //return toHex(result);
-        }
-        catch (RuntimeException e)  {  throw e;  }
-        catch (Exception e)  {  throw new RuntimeException (e);  }
-    }
-
-    private static String toHex(byte[] array)
-    {
-        BigInteger bi = new BigInteger(1, array);
-        String hex = bi.toString(16);
-        int paddingLength = (array.length * 2) - hex.length();
-        if (paddingLength > 0)  return String.format("%0"+paddingLength+"d", 0) + hex;
-        else  return hex;
-    }
-
-    public static class PasswordClientHash
-    {
-        public static void main(String[] args) throws IOException  {
-            System.out.print(passwordClientHash(args[0], args[1]));
-        }
-    }
-
-    public static class PasswordServerHash
-    {
-        public static void main(String[] args) throws IOException  {
-            System.out.write(passwordServerHash(args[0], args[1]));
-        }
-    }
-
-    public static class PasswordClientServerHash
-    {
-        public static void main(String[] args) throws IOException  {
-            System.out.write(passwordServerHash(args[0], passwordClientHash(args[0], args[1])));
-        }
     }
 }

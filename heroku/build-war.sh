@@ -15,7 +15,7 @@ cd ../..
 # copy tmp, webapp-runner.jar and Procfile
 cp -r heroku/tmp out/heroku
 cp -r heroku/Procfile out/heroku
-cp /work/maven-3.3.3/.m2/repository/com/github/jsimone/webapp-runner/7.0.57.2/webapp-runner-7.0.57.2.jar out/heroku/webapp-runner.jar
+cp /work/code/java/lib/webapp-runner-7.0.57.2.jar out/heroku/webapp-runner.jar
 
 # copy it to Dropbox
 rm -r /work/Dropbox/Apps/Heroku/planlist
