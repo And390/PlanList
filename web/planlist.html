@@ -120,6 +120,7 @@
         parser.addTextSuper = parser.addText;
         parser.addItemSuper = parser.addItem;
         parser.addItem = function(marker, source, pos)  {
+            this.source = source;
             var item = this.addItemSuper(marker, source, pos);
             var itemMark = item.children[0];
             var markPanel = document.createElement("SPAN");
@@ -139,13 +140,13 @@
                     // заменить маркер
                     itemMark.className = this.className;
                     if (this.markChar)  {
-                        var result = source.substring(0, pos) + this.markChar[0] + source.substring(pos+1);
+                        var result = parser.source = parser.source.substring(0, pos) + this.markChar[0] + parser.source.substring(pos+1);
                         // сохранить
                         planSaveAction(result);
                     }
                     // выбрав none, можно удалить маркер
                     else  {
-                        result = source.substring(0, pos) + " " + source.substring(pos+1);
+                        result = parser.source = parser.source.substring(0, pos) + " " + parser.source.substring(pos+1);
                         // сохранить
                         planSaveAction(result);
                         //    перестроить DOM (из-за того, что позиции сбиты; в целях оптимизации, можно было бы исправить только их)
@@ -170,7 +171,7 @@
                         // сохранить и выйти
                         var markChar = planlist.MARKER_CHARS[planlist.MARKERS.indexOf(mark)];
                         if (markChar)  {
-                            var result = source.substring(0, pos) + markChar[0] + source.substring(pos+1);
+                            var result = parser.source = parser.source.substring(0, pos) + markChar[0] + parser.source.substring(pos+1);
                             planSaveAction(result);
                             break;
                         }
