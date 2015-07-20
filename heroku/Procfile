@@ -1,1 +1,1 @@
-web: java $JAVA_OPTS -jar webapp-runner.jar --port $PORT --expand-war planlist.war
+web: java $JAVA_OPTS -jar webapp-runner.jar --port $PORT --expand-war planlist.war --uri-encoding UTF-8

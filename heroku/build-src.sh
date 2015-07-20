@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-cd "$(dirname "$(dirname "$0")")"
+cd "$(dirname "$(readlink -e "$0")")"/..
 
 # create build dir
 rm -rf out/heroku
